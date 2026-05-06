@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cptservo"
+version = "0.1.0"
+description = "Learned closed-loop servo for a chip-scale CPT-Rb87 atomic clock, trained inside a calibrated digital twin"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Jack"}]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "seaborn>=0.13",
+    "h5py>=3.9",
+    "pyyaml>=6.0",
+    "tqdm>=4.65",
+    "pyarrow>=14.0",
+    "torch>=2.0",
+    "torchdiffeq>=0.2",
+    "qutip>=5.0",
+    "stable-baselines3>=2.0",
+    "gymnasium>=0.29",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "ruff>=0.1", "nbconvert>=7.0", "ipykernel>=6.0", "jupyter>=1.0"]
+demo = ["streamlit>=1.30"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

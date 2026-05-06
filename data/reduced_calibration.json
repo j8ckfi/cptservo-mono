@@ -1,0 +1,22 @@
+{
+  "light_shift_coeff": -1.4715733084836036,
+  "buffer_gas_shift_coeff": -7400000.0,
+  "lumped_zeeman_coeff": -0.05272121569065576,
+  "constant_offset_Hz": -1.1050403777528195,
+  "buffer_gas_shift_coeff_pinned": true,
+  "buffer_gas_shift_coeff_pinning_rationale": "compute_obe_surface fixes buffer_pressure_torr=25; the buf*P_buf product is degenerate with the global offset and cannot be identified from this surface. Pinned at the RbSpec analytic value (Steck-validated).",
+  "peak_slope_error_max_pct": 35.763555141838495,
+  "lock_point_shift_max_pct_vs_spread": 9.307813212361317,
+  "fit_converged": true,
+  "fit_message": "closed-form OLS \u2014 always converges by construction",
+  "optimizer_iterations": 1,
+  "n_grid_points_fit": 1250,
+  "fit_residual_rms_Hz": 0.2215161381963259,
+  "fit_wall_s": 0.16551190009340644,
+  "obe_surface_path": "C:\\Users\\Jack\\Documents\\Research\\WIP\\CPTServo\\data\\obe_surface.h5",
+  "buffer_pressure_torr": 25.0,
+  "n_laser_points": 10,
+  "n_T_points": 5,
+  "n_B_points": 5,
+  "n_I_points": 5
+}

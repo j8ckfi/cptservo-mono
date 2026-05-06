@@ -1,0 +1,120 @@
+# CPTServo Layer-0 frozen artifact.
+# FROZEN after M3 calibration audit passes; do not edit afterward.
+# Editing this file invalidates all benchmark headlines.
+
+# Reference frequency: Rb-87 ground hyperfine (Steck rev. 2.3).
+# Source: WIP/RbSpec/src/rbspec/solver.py:48 (HF_GROUND).
+reference_frequency_Hz: 6834682610.904
+
+# Noise budget. Each entry is a fractional-frequency amplitude per sqrt(Hz)
+# (white-FM contributions) or a fractional-frequency 1/f-flicker amplitude.
+# Calibrated against Kitching 2018 review numbers (sigma_y(tau=1s) ~ 4e-11)
+# and the canonical CSAC noise inventory:
+#   - photon shot noise (detector quantum limit)
+#   - LO white FM (microwave VCXO short-term)
+#   - LO 1/f flicker FM (microwave VCXO long-term)
+#   - microwave phase noise (white + flicker, dominates the white-FM contribution
+#     in real CSACs at typical loop bandwidths)
+#   - detector electronics noise (TIA + ADC)
+#   - intensity flicker (laser current 1/f drives light-shift modulation)
+# All white-FM contributions sum in quadrature; flicker contributions live at
+# long-tau and are propagated separately as 1/f-shaped noise on rf_corr.
+noise_budget:
+  photon_shot_noise_amp: 3.0e-11
+  lo_white_fm_amp: 1.0e-11
+  lo_flicker_fm_amp: 1.0e-11               # bumped from 5e-12 (v6 was too quiet at long-tau)
+  microwave_phase_white_amp: 6.0e-11
+  microwave_phase_flicker_amp: 7.0e-11     # bumped from 4e-12 — calibrated against Kitching tau=100s
+  detector_electronics_amp: 1.0e-11
+  intensity_flicker_amp: 5.0e-12           # bumped from 1e-12
+  photodetector_thermal_noise_amp: 1.0e-13
+
+# Discriminator-input noise amplitude in ci units (per-sample at decimation
+# rate). Physically: combined photon shot + laser AM + laser FM-to-AM noise
+# on the demodulated CPT discriminator output, per Knappe 2004 APL three-way
+# decomposition. Calibrated to land sigma_y(1s) ~ Kitching's 4e-11 in the
+# closed-loop output of our run_fast_loop with kp=3e4 ki=3e6. NOT a fudge:
+# this noise enters the error signal where the controller cannot reject it
+# (indistinguishable from atomic-frequency signal), is transduced 1:1 to
+# the output via |G/(1+L)|^2 -> 1/discriminator_slope^2, and produces the
+# Kitching 1/sqrt(tau) shape at short tau.
+discriminator_input_noise_amp_ci: 7.0e-4
+
+# Disturbance recipes. Each scenario is a dataclass; generators live in
+# src/cptservo/twin/disturbance.py. Seeds are fixed for reproducibility.
+disturbance_recipes:
+  clean:
+    duration_s: 1000.0
+    sample_rate_Hz: 1000.0
+    seed: 42
+    T_K_constant: 333.15            # 60 C nominal
+    B_uT_constant: 50.0
+    laser_intensity_norm_constant: 1.0
+  thermal_ramp:
+    duration_s: 1000.0
+    sample_rate_Hz: 1000.0
+    seed: 43
+    T_K_baseline: 333.15
+    T_K_ramp_amplitude_K: 5.0       # +/-5 K slow drift
+    T_K_ramp_period_s: 200.0
+    T_K_white_noise_K: 0.05
+    B_uT_constant: 50.0
+    laser_intensity_norm_constant: 1.0
+  b_field_drift:
+    duration_s: 1000.0
+    sample_rate_Hz: 1000.0
+    seed: 44
+    T_K_constant: 333.15
+    B_uT_baseline: 50.0
+    B_uT_drift_amplitude_uT: 5.0    # +/-5 uT drift
+    B_uT_drift_period_s: 100.0
+    B_uT_white_noise_uT: 0.1
+    laser_intensity_norm_constant: 1.0
+  laser_intensity_drift:
+    duration_s: 1000.0
+    sample_rate_Hz: 1000.0
+    seed: 45
+    T_K_constant: 333.15
+    B_uT_constant: 50.0
+    laser_intensity_baseline: 1.0
+    laser_intensity_drift_amplitude: 0.05  # +/-5% drift
+    laser_intensity_drift_period_s: 50.0
+    laser_intensity_white_noise: 0.001
+  all_stacked:
+    duration_s: 1000.0
+    sample_rate_Hz: 1000.0
+    seed: 46
+    T_K_baseline: 333.15
+    T_K_ramp_amplitude_K: 5.0
+    T_K_ramp_period_s: 200.0
+    T_K_white_noise_K: 0.05
+    B_uT_baseline: 50.0
+    B_uT_drift_amplitude_uT: 5.0
+    B_uT_drift_period_s: 100.0
+    B_uT_white_noise_uT: 0.1
+    laser_intensity_baseline: 1.0
+    laser_intensity_drift_amplitude: 0.05
+    laser_intensity_drift_period_s: 50.0
+    laser_intensity_white_noise: 0.001
+
+# Actuator bounds for both classical and learned controllers.
+# Outside these bounds the controllers must saturate (PI/RH-LQR) or
+# be penalized (APG/PPO).
+actuator_bounds:
+  laser_detuning_max_Hz: 1.0e6     # +/-1 MHz max correction
+  rf_detuning_max_Hz: 1.0e3        # +/-1 kHz max correction
+  laser_detuning_slew_rate_Hz_per_s: 1.0e9
+  rf_detuning_slew_rate_Hz_per_s: 1.0e6
+
+# Sample-rate hierarchy.
+sample_rates:
+  physics_integration_Hz: 10000.0
+  lockin_demod_Hz: 1000.0
+  controller_training_Hz: 100.0
+  controller_deployment_Hz: 1000.0  # interpolated up for Jetson
+
+# Allan deviation evaluation.
+allan_taus_s: [1.0, 10.0, 100.0, 1000.0]
+
+# RNG seed for any otherwise-unspecified randomness.
+global_seed: 1729

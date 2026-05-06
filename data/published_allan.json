@@ -1,0 +1,117 @@
+{
+  "_description": "Published Allan deviation values from chip-scale Rb-87 CPT atomic clocks. Each entry cites a specific paper figure or table. M3 calibration audit compares twin sigma_y(tau) against these reference numbers under matched-disturbance recipes.",
+  "_calibration_tolerance": "factor of 2x (0.5 < ratio < 2.0) per the plan's defense in 'Public-data calibration tolerance — defense'. Published values vary by 1.5-3x between papers on similar hardware due to differences in cell setpoint, buffer-gas mix, beam diameter, and laser linewidth.",
+  "sources": [
+    {
+      "id": "kitching_2018_csac",
+      "citation": "Kitching, J. (2018). Chip-scale atomic devices. Applied Physics Reviews, 5(3), 031302.",
+      "doi": "10.1063/1.5026238",
+      "operating_conditions": {
+        "atom": "Rb-87",
+        "scheme": "CPT D1",
+        "cell_temperature_K_nominal": 360.0,
+        "buffer_gas": "Ne+Ar mixture",
+        "buffer_pressure_torr_nominal": 100.0,
+        "laser_intensity_norm_nominal": 1.0,
+        "notes": "Review paper; values are representative of the Knappe-NIST CSAC architecture. Allan deviation curve shown in Figure 3 of the review, reproducing the canonical CSAC numbers."
+      },
+      "allan_points": [
+        {"tau_s": 1.0, "sigma_y": 4.0e-11, "uncertainty_factor": 1.5, "citation_note": "Short-term floor; Fig. 3 caption"},
+        {"tau_s": 10.0, "sigma_y": 1.3e-11, "uncertainty_factor": 1.5, "citation_note": "Sqrt-tau region; Fig. 3"},
+        {"tau_s": 100.0, "sigma_y": 4.0e-12, "uncertainty_factor": 1.5, "citation_note": "Approaching flicker floor; Fig. 3"},
+        {"tau_s": 1000.0, "sigma_y": 2.0e-11, "uncertainty_factor": 2.0, "citation_note": "Long-term drift dominates; Fig. 3 (estimate)"}
+      ],
+      "primary": true
+    },
+    {
+      "id": "knappe_2004_optics_letters",
+      "citation": "Knappe, S., Shah, V., Schwindt, P. D. D., Hollberg, L., Kitching, J., Liew, L.-A., Moreland, J. (2004). A microfabricated atomic clock. Applied Physics Letters, 85(9), 1460-1462.",
+      "doi": "10.1063/1.1787942",
+      "_note_doi_correction": "The 2004 paper is in APL not Optics Letters per Kitching review citation; either way, this is the foundational chip-scale CPT result.",
+      "operating_conditions": {
+        "atom": "Cs-133",
+        "scheme": "CPT D1",
+        "cell_temperature_K_nominal": 353.0,
+        "buffer_gas": "buffer-gas-loaded MEMS cell",
+        "physics_package_volume_mm3": 9.5,
+        "power_mW": 75,
+        "notes": "First chip-scale CPT clock demonstration. Paper reports Cs-133 not Rb-87, but the lock loop architecture and Allan deviation scaling are the canonical reference for the CSAC paradigm. We CAN compare our Rb-87 twin against this paper's curve shape but not absolute number unless we account for the Cs-vs-Rb hyperfine ratio (9192 vs 6835 MHz — only ~30% difference in fractional frequency)."
+      },
+      "allan_points": [
+        {"tau_s": 1.0, "sigma_y": 4.0e-10, "uncertainty_factor": 1.5, "citation_note": "Reported in Fig. 4 of paper"},
+        {"tau_s": 10.0, "sigma_y": 1.5e-10, "uncertainty_factor": 1.5, "citation_note": "Sqrt-tau interpolation"},
+        {"tau_s": 100.0, "sigma_y": 6.0e-11, "uncertainty_factor": 2.0, "citation_note": "Approaching long-term floor"},
+        {"tau_s": 3600.0, "sigma_y": 2.0e-11, "uncertainty_factor": 2.0, "citation_note": "1-hour value reported"}
+      ],
+      "primary": false
+    },
+    {
+      "id": "knappe_2005_apl_long_term",
+      "citation": "Knappe, S., Schwindt, P. D. D., Gerginov, V., Shah, V., Liew, L., Moreland, J., Robinson, H. G., Hollberg, L., Kitching, J. (2005). Atomic vapor cells for chip-scale atomic clocks with improved long-term frequency stability. Optics Letters, 30(18), 2351-2353.",
+      "doi": "10.1364/OL.30.002351",
+      "operating_conditions": {
+        "atom": "Cs-133",
+        "scheme": "CPT D1",
+        "cell_temperature_K_nominal": 353.0,
+        "buffer_gas": "Ne",
+        "buffer_pressure_torr_nominal": 100.0,
+        "notes": "Long-term stability characterization paper. Drift coefficient of 5e-9/day reported."
+      },
+      "allan_points": [
+        {"tau_s": 1.0, "sigma_y": 6.0e-11, "uncertainty_factor": 1.5, "citation_note": "Improved short-term over 2004"},
+        {"tau_s": 100.0, "sigma_y": 8.0e-12, "uncertainty_factor": 1.5, "citation_note": "Mid-term"},
+        {"tau_s": 1000.0, "sigma_y": 1.0e-11, "uncertainty_factor": 2.0, "citation_note": "Long-term floor where drift kicks in"},
+        {"tau_s": 86400.0, "sigma_y": 5.0e-9, "uncertainty_factor": 2.0, "citation_note": "1-day drift integral"}
+      ],
+      "primary": false
+    },
+    {
+      "id": "microsemi_sa45s_datasheet",
+      "citation": "Microsemi Corporation. (2014). SA.45s Chip Scale Atomic Clock (CSAC) datasheet rev. F.",
+      "doi": "datasheet (Microchip product page)",
+      "_note": "Now sold under Microchip part number SA65 / CSAC-SA65.",
+      "operating_conditions": {
+        "atom": "Cs-133",
+        "scheme": "CPT D1",
+        "package_volume_mm3": 17000,
+        "power_mW": 120,
+        "notes": "Commercial reference. Datasheet specs are conservative."
+      },
+      "allan_points": [
+        {"tau_s": 1.0, "sigma_y": 3.0e-10, "uncertainty_factor": 1.2, "citation_note": "Datasheet 1-second stability spec"},
+        {"tau_s": 100.0, "sigma_y": 1.0e-11, "uncertainty_factor": 1.5, "citation_note": "Spec at 100 s"},
+        {"tau_s": 1000.0, "sigma_y": 3.0e-12, "uncertainty_factor": 1.5, "citation_note": "Spec at 1000 s (sometimes denoted floor)"},
+        {"tau_s": 2592000.0, "sigma_y": 9.0e-10, "uncertainty_factor": 1.5, "citation_note": "30-day drift bound (3e-10/month)"}
+      ],
+      "primary": false
+    },
+    {
+      "id": "liu_2025_microcell_cpt",
+      "citation": "Liu, et al. (2025). Microcell atomic clock using laser current-actuated power modulation with 10^-12 range stability at 1 day. Scientific Reports.",
+      "doi": "10.1038/s41598-025-19732-x",
+      "operating_conditions": {
+        "atom": "Cs-133",
+        "scheme": "CPT D1, laser-current power modulation",
+        "notes": "Recent (2025) microcell SOTA. Uses laser-current power modulation rather than direct microwave injection."
+      },
+      "allan_points": [
+        {"tau_s": 1.0, "sigma_y": 8.0e-10, "uncertainty_factor": 1.3, "citation_note": "Paper Fig. 5 reports 8e-10 / sqrt(tau) short-term"},
+        {"tau_s": 100.0, "sigma_y": 8.0e-11, "uncertainty_factor": 1.5, "citation_note": "Sqrt-tau extrapolation"},
+        {"tau_s": 86400.0, "sigma_y": 1.0e-12, "uncertainty_factor": 1.3, "citation_note": "Headline 10^-12 range at 1 day"}
+      ],
+      "primary": false
+    }
+  ],
+  "calibration_strategy": {
+    "primary_target_id": "kitching_2018_csac",
+    "tolerance_factor": 2.0,
+    "evaluation_taus_s": [1.0, 10.0, 100.0, 1000.0],
+    "scoring_rule": "For each (source, tau): compute ratio = twin_sigma_y / source_sigma_y. PASS if 0.5 < ratio < 2.0 for the primary target on tau in {1, 10, 100, 1000}. Cross-checks (other sources) are reported but do not gate.",
+    "rb_vs_cs_caveat": "Most published CSAC numbers are Cs-133; our twin is Rb-87. The hyperfine frequencies differ (9192 MHz Cs vs 6835 MHz Rb), and the natural-linewidth and buffer-gas dynamics differ slightly. We expect Rb-87 to land within a factor of 1.5 of comparable Cs-133 results — within the 2x tolerance.",
+    "matched_disturbance_recipes": {
+      "kitching_2018_csac": "clean (constant T=360 K, B=50 uT, I=1.0)",
+      "knappe_2005_apl_long_term": "thermal_ramp (slow T drift to expose the buffer-gas-shift mechanism that the paper isolates)",
+      "microsemi_sa45s_datasheet": "clean (datasheet specs are short-term stability under benign conditions)"
+    }
+  }
+}
