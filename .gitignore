@@ -24,6 +24,7 @@ Thumbs.db
 
 # Run artifacts (keep input fixtures, ignore outputs)
 data/gate_*.json
+!data/gate_M5.json
 data/*.log
 data/checkpoint_*.json
 models/

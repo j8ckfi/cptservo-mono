@@ -1,0 +1,32 @@
+{
+  "milestone": "M5",
+  "controller_label": "RH-LQR/DLQR",
+  "controller_note": "Historical RH-LQR name retained; implementation is steady-state two-state DLQR, not iterative online MPC.",
+  "Q_diag": [
+    1000000000000.0,
+    10000000000.0
+  ],
+  "R": 1.0,
+  "control_dt_s": 0.001,
+  "rf_limit_Hz": 1000.0,
+  "lqr_gain_K": [
+    6543.482110644564,
+    99942.5013288173
+  ],
+  "scenario": "thermal_ramp",
+  "duration_s": 100.0,
+  "rng_seed": 42,
+  "disc_noise_amp_ci": 0.0007,
+  "noise_injection_point": "rf_actual_pre_step+disc_noise_pre_controller",
+  "pi_sigma_y_1s_thermal": 1.5760291031572498e-10,
+  "rhlqr_sigma_y_1s_thermal": 3.0131488303682123e-11,
+  "pi_sigma_y_10s_thermal": 5.860926165195353e-11,
+  "rhlqr_sigma_y_10s_thermal": 5.0736994150999564e-12,
+  "thermal_win_factor_pi_over_lqr": 11.551583343216022,
+  "rhlqr_wins_on_thermal_at_tau10s": true,
+  "pi_wall_s": 337.88394690002315,
+  "lqr_wall_s": 338.53604249993805,
+  "tests_passed": null,
+  "ruff_clean": null,
+  "gate_pass": true
+}
