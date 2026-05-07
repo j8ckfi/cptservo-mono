@@ -34,14 +34,14 @@ Anti-fudge discipline
 
 Outputs
 -------
-data/gate_M8.json                  — aggregated probe results + gate verdict
+data/eval_adversarial.json                  — aggregated probe results + benchmark verdict
 tests/adversarial/REPORT.md        — human-readable per-probe writeup
-logs/m8_adversarial.log            — timestamped run log
+logs/eval_adversarial.log            — timestamped run log
 
 Usage
 -----
     cd /c/Users/Jack/Documents/Research/WIP/CPTServo
-    python scripts/m8_adversarial.py
+    python scripts/eval_adversarial.py
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
+from audit_calibration import make_calibrated_twin  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
 from cptservo.baselines.dlqr import DLQRController  # noqa: E402
@@ -88,7 +88,7 @@ REALITY_GAP_FRAC: float = 0.05
 # ---------------------------------------------------------------------------
 # Logger (file + console; flushed each call)
 # ---------------------------------------------------------------------------
-_LOG_PATH = _PROJECT_ROOT / "logs" / "m8_adversarial.log"
+_LOG_PATH = _PROJECT_ROOT / "logs" / "eval_adversarial.log"
 _LOG_PATH.parent.mkdir(exist_ok=True)
 _LOG_FH = open(_LOG_PATH, "w", encoding="utf-8")  # noqa: SIM115
 
@@ -385,12 +385,12 @@ def run_battery() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Aggregation -> gate JSON + REPORT.md
+# Aggregation -> benchmark JSON + REPORT.md
 # ---------------------------------------------------------------------------
 
 
 def aggregate_and_write(results: dict[str, Any]) -> dict[str, Any]:
-    """Compute gate verdict, write data/gate_M8.json and tests/adversarial/REPORT.md.
+    """Compute benchmark verdict, write data/eval_adversarial.json and tests/adversarial/REPORT.md.
 
     Args:
         results: Dict mapping probe-key -> probe result.
@@ -412,10 +412,10 @@ def aggregate_and_write(results: dict[str, Any]) -> dict[str, Any]:
         np.isfinite(reality_gap_speedup) and reality_gap_speedup > 1.05
     )
 
-    gate_pass = bool(n_lqr_wins >= 3 and reality_gap_pos_5pct)
-    gate_disposition = (
+    passed = bool(n_lqr_wins >= 3 and reality_gap_pos_5pct)
+    disposition = (
         "ROBUST POSITIVE WIN PRESERVED"
-        if gate_pass
+        if passed
         else "DEMOTE HEADLINE - characterised failure modes"
     )
 
@@ -431,7 +431,7 @@ def aggregate_and_write(results: dict[str, Any]) -> dict[str, Any]:
         f"  Reality-gap speedup={reality_gap_speedup:.3f}, "
         f"positive>5%={reality_gap_pos_5pct}"
     )
-    log(f"  gate_pass = {gate_pass} ({gate_disposition})")
+    log(f"  passed = {passed} ({disposition})")
 
     gate_doc: dict[str, Any] = {
         "milestone": "M8",
@@ -444,12 +444,12 @@ def aggregate_and_write(results: dict[str, Any]) -> dict[str, Any]:
         "n_lqr_wins_of_5": n_lqr_wins,
         "reality_gap_speedup": reality_gap_speedup,
         "reality_gap_pos_5pct": reality_gap_pos_5pct,
-        "gate_pass": gate_pass,
-        "gate_disposition": gate_disposition,
+        "passed": passed,
+        "disposition": disposition,
         "noise_injection_point": "rf_actual_pre_step+disc_noise_pre_controller",
     }
 
-    out_json = _PROJECT_ROOT / "data" / "gate_M8.json"
+    out_json = _PROJECT_ROOT / "data" / "eval_adversarial.json"
     out_json.write_text(json.dumps(gate_doc, indent=2), encoding="utf-8")
     log(f"Wrote {out_json}")
 
@@ -461,14 +461,14 @@ def aggregate_and_write(results: dict[str, Any]) -> dict[str, Any]:
     lines: list[str] = []
     lines.append("# M8 Adversarial Battery — REPORT\n")
     lines.append(
-        f"**Verdict**: `gate_pass={gate_pass}` "
+        f"**Verdict**: `passed={passed}` "
         f"(LQR wins on {n_lqr_wins}/5 probes; "
         f"reality_gap_speedup={reality_gap_speedup:.3f}, "
         f"pos>5%={reality_gap_pos_5pct})\n\n"
     )
     lines.append(
         "Headline disposition: **"
-        + ("Robust positive LQR win preserved." if gate_pass else gate_disposition)
+        + ("Robust positive LQR win preserved." if passed else disposition)
         + "**\n\n"
     )
 
@@ -521,14 +521,14 @@ def aggregate_and_write(results: dict[str, Any]) -> dict[str, Any]:
         "* **E — Worst-case stacked**: all_stacked with B drift × 2 and I drift × 2.\n\n"
     )
 
-    lines.append("## Gate criterion\n")
+    lines.append("## Acceptance criterion\n")
     lines.append(
         "Per plan §M8: DLQR retains positive win on ≥3 of 5 probes\n"
         "AND retains > 5 % positive win on the reality-gap probe.\n\n"
     )
 
     lines.append("## Honest assessment\n")
-    if gate_pass:
+    if passed:
         lines.append(
             "All adversarial probes preserve a positive DLQR win. The "
             "robust conclusion is not that the exact 11.55x M5 magnitude "

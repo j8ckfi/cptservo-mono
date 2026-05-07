@@ -7,7 +7,7 @@ Steps:
 3. Persist to data/obe_surface.h5.
 4. Run fit_reduced_to_obe and persist data/reduced_calibration.json.
 5. Compute peak_slope_error and lock_point_shift max-pct vs the reduced model.
-6. Write data/gate_M2.json.
+6. Write data/calibration_artifact.json.
 """
 
 from __future__ import annotations
@@ -136,12 +136,12 @@ def main() -> None:
     )
 
     # ---------------------------------------------------------------------
-    # Write gate JSON
+    # Write benchmark JSON
     # ---------------------------------------------------------------------
     peak_slope_pass = cal.peak_slope_error_max_pct < 5.0
     lockpt_pass = cal.lock_point_shift_max_pct < 2.0
 
-    gate = {
+    result = {
         "milestone": "M2",
         "single_point_obe_wall_s": single_pt_s,
         "obe_surface_path": str(surface_path.relative_to(project_root)),
@@ -168,10 +168,10 @@ def main() -> None:
         "n_tests_total": 4,
         "ruff_clean": True,
         "deviations_from_plan": deviations,
-        "gate_pass": (peak_slope_pass and lockpt_pass and cal.fit_converged),
+        "passed": (peak_slope_pass and lockpt_pass and cal.fit_converged),
     }
 
-    out_path = data_dir / "gate_M2.json"
+    out_path = data_dir / "calibration_artifact.json"
     out_path.write_text(json.dumps(gate, indent=2), encoding="utf-8")
     log(f"[{time.strftime('%H:%M:%S')}] Wrote {out_path}")
     log(json.dumps(gate, indent=2))

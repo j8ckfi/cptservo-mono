@@ -18,7 +18,7 @@ Bundled local sources:
     - WIP/CPTServo/src/cptservo/   (full package)
     - WIP/CPTServo/configs/        (v1_recipe.yaml — Layer-0 frozen)
     - WIP/CPTServo/data/           (reduced_calibration.json — M2 fitted params)
-    - WIP/CPTServo/scripts/        (m6_apg_train.py + run_m3_m4_gates.py)
+    - scripts/        (train_apg.py + run_m3_m4_gates.py)
     - WIP/RbSpec/src/rbspec/       (physical constants used by reduced.py)
 """
 
@@ -101,7 +101,7 @@ app = modal.App("cptservo-m6-apg", image=image)
 def train() -> dict:
     """Run the full M6 APG curriculum on Modal.
 
-    Mirrors `scripts/m6_apg_train.py:main()` with the original spec restored
+    Mirrors `scripts/train_apg.py:main()` with the original spec restored
     (batch_size=1024, truncation_window=200) since memory is no longer the
     binding constraint.
     """
@@ -118,9 +118,9 @@ def train() -> dict:
     os.chdir("/app/CPTServo")
 
     # Restore the original spec for each phase before invoking the trainer
-    import m6_apg_train
+    import train_apg
 
-    for phase in m6_apg_train.PHASES:
+    for phase in train_apg.PHASES:
         phase["batch_size"] = 1024
         phase["truncation_window"] = 200
 
@@ -128,7 +128,7 @@ def train() -> dict:
         "[modal] Running M6 APG curriculum with restored spec "
         "(batch=1024, truncation=200, ~64GB headroom)"
     )
-    m6_apg_train.main()
+    train_apg.main()
 
     # Copy fresh outputs to volume so they survive container shutdown
     print("[modal] Copying outputs to /cache volume...")

@@ -1,4 +1,4 @@
-"""Tests for the M11 direct-CfC promotion gate helpers."""
+"""Tests for the CfC promotion benchmark helpers."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from scripts.cfc_improvement_campaign import score_candidate
-from scripts.run_m11_gate import SensorTransformController, summarize_controller
+from scripts.sweep_cfc import score_candidate
+from scripts.eval_cfc import SensorTransformController, summarize_controller
 
 
 class _RecorderController:
@@ -82,12 +82,12 @@ def test_m11_summary_requires_m5_improvement_and_all_robust_wins() -> None:
         }
 
     summary = summarize_controller("candidate", Path("candidate.json"), probes)
-    assert summary["gate_pass"] is True
+    assert summary["passed"] is True
     assert summary["promotion_decision"] == "promote"
 
     probes["ood_3x_thermal_slope"]["controllers"]["candidate"]["ties_or_wins_10s"] = False
     summary = summarize_controller("candidate", Path("candidate.json"), probes)
-    assert summary["gate_pass"] is False
+    assert summary["passed"] is False
     assert summary["promotion_decision"] == "do_not_promote"
 
 

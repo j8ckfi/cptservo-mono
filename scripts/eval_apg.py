@@ -1,6 +1,6 @@
-"""M6 gate: train APG policy, then compare PI vs DLQR vs APG on all_stacked.
+"""APG benchmark: train APG policy, then compare PI vs DLQR vs APG on all_stacked.
 
-Gate criterion (from spec):
+Acceptance criterion (from spec):
     APG sigma_y(tau=100s) on all_stacked <= 0.8 * min(PI sigma_y, LQR sigma_y)
     i.e., APG beats BOTH baselines by >=20% at tau=100s.
 
@@ -8,21 +8,21 @@ Steps:
     1. Train APG policy via train_apg() with default curriculum.
     2. Run 100 s of all_stacked through PI, DLQR, and APG.
     3. Compute sigma_y at tau in {1, 10, 100} s for each.
-    4. Evaluate gate criterion and write data/gate_M6.json.
+    4. Evaluate acceptance criterion and write data/eval_apg.json.
 
 Anti-fudge discipline:
     - Same twin, same disturbance trace, same disc_noise_amp_ci for all runs.
     - No post-loop additive noise.
     - sigma_y computed from overlapping Allan deviation on demeaned y series.
-    - Gate criterion hard-coded; not adjusted post-hoc.
-    - If APG does not beat both baselines, GATE FAIL is reported honestly.
+    - Acceptance criterion hard-coded; not adjusted post-hoc.
+    - If APG does not beat both baselines, BENCHMARK FAIL is reported honestly.
 
 Usage:
     cd WIP/CPTServo
-    python scripts/run_m6_gate.py
+    python scripts/eval_apg.py
 
 Output:
-    data/gate_M6.json
+    data/eval_apg.json
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 
-from run_m3_m4_gates import log, make_calibrated_twin, run_fast_loop  # noqa: E402
+from audit_calibration import log, make_calibrated_twin, run_fast_loop  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
 from cptservo.baselines.dlqr import DLQRController  # noqa: E402
@@ -251,10 +251,10 @@ def run_evaluation(policy: APGPolicy) -> dict[str, Any]:
 
     if np.isfinite(apg_100s) and np.isfinite(best_baseline_100s) and best_baseline_100s > 0.0:
         ratio_apg_to_best = apg_100s / best_baseline_100s
-        gate_criterion_met = bool(ratio_apg_to_best <= GATE_RATIO_THRESHOLD)
+        criterion_met = bool(ratio_apg_to_best <= GATE_RATIO_THRESHOLD)
     else:
         ratio_apg_to_best = float("nan")
-        gate_criterion_met = False
+        criterion_met = False
 
     ratio_apg_to_pi = (
         apg_100s / pi_100s if (np.isfinite(apg_100s) and pi_100s > 0) else float("nan")
@@ -265,8 +265,8 @@ def run_evaluation(policy: APGPolicy) -> dict[str, Any]:
 
     log(f"\n  best_baseline_sigma_y(100s) = {best_baseline_100s:.3e}")
     log(f"  ratio APG/best_baseline(100s) = {ratio_apg_to_best:.3f}")
-    log(f"  gate threshold = {GATE_RATIO_THRESHOLD}")
-    log(f"  gate_criterion_met = {gate_criterion_met}")
+    log(f"  acceptance threshold = {GATE_RATIO_THRESHOLD}")
+    log(f"  criterion_met = {criterion_met}")
 
     return {
         "pi_sigma_y_1s": pi_1s,
@@ -282,7 +282,7 @@ def run_evaluation(policy: APGPolicy) -> dict[str, Any]:
         "ratio_apg_to_pi_100s": ratio_apg_to_pi,
         "ratio_apg_to_lqr_100s": ratio_apg_to_lqr,
         "ratio_apg_to_best_baseline_100s": ratio_apg_to_best,
-        "gate_criterion_met": gate_criterion_met,
+        "criterion_met": criterion_met,
         "pi_wall_s": pi_wall,
         "lqr_wall_s": lqr_wall,
         "apg_wall_s": apg_wall,
@@ -366,7 +366,7 @@ def main() -> None:
     data_dir.mkdir(exist_ok=True)
     models_dir.mkdir(exist_ok=True)
 
-    log("=== M6 gate script start ===")
+    log("=== APG benchmark script start ===")
 
     # 1. Train APG policy
     log("\n--- Step 1: Train APG policy ---")
@@ -397,19 +397,19 @@ def main() -> None:
     log("\n--- Step 4: ruff ---")
     ruff_clean = run_ruff()
 
-    # 5. Overall gate verdict
-    gate_pass = bool(eval_results["gate_criterion_met"] and tests_pass and ruff_clean)
+    # 5. Overall benchmark verdict
+    passed = bool(eval_results["criterion_met"] and tests_pass and ruff_clean)
 
     total_wall = time.perf_counter() - t_global_start
 
-    log("\n=== M6 gate verdict ===")
-    log(f"  apg_beats_both_baselines_20pct = {eval_results['gate_criterion_met']}")
+    log("\n=== APG benchmark verdict ===")
+    log(f"  apg_beats_both_baselines_20pct = {eval_results['criterion_met']}")
     log(f"  tests_passed       = {tests_pass} ({n_passed}/{n_total})")
     log(f"  ruff_clean         = {ruff_clean}")
-    log(f"  gate_pass          = {gate_pass}")
+    log(f"  passed          = {passed}")
     log(f"  total_wall_s       = {total_wall:.1f}s ({total_wall / 60:.1f} min)")
 
-    # 6. Write gate JSON
+    # 6. Write benchmark JSON
     gate_doc: dict[str, Any] = {
         "milestone": "M6",
         "policy_type": "APG_MLP",
@@ -455,20 +455,20 @@ def main() -> None:
             f"APG sigma_y({GATE_TAU:.0f}s) <= {GATE_RATIO_THRESHOLD} "
             f"* min(PI, LQR) sigma_y({GATE_TAU:.0f}s) on {SCENARIO}"
         ),
-        "gate_criterion_met": eval_results["gate_criterion_met"],
+        "criterion_met": eval_results["criterion_met"],
         "tests_passed": tests_pass,
         "n_tests_passed": n_passed,
         "n_tests_total": n_total,
         "ruff_clean": ruff_clean,
-        "gate_pass": gate_pass,
+        "passed": passed,
         "total_wall_s": total_wall,
     }
 
-    out_path = data_dir / "gate_M6.json"
+    out_path = data_dir / "eval_apg.json"
     out_path.write_text(json.dumps(gate_doc, indent=2), encoding="utf-8")
     log(f"\nWrote {out_path}")
 
-    verdict = "GATE PASS" if gate_pass else "GATE FAIL"
+    verdict = "BENCHMARK PASS" if passed else "BENCHMARK FAIL"
     log(f"\n{'=' * 56}")
     log(f"  M6 {verdict}")
     log(f"  sigma_y(100s): PI={eval_results['pi_sigma_y_100s']:.3e}")

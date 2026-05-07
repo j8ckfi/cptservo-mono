@@ -28,5 +28,5 @@
   "lqr_wall_s": 338.53604249993805,
   "tests_passed": null,
   "ruff_clean": null,
-  "gate_pass": true
+  "passed": true
 }

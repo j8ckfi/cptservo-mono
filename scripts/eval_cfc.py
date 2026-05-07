@@ -1,4 +1,4 @@
-"""M11 direct-CfC promotion gate.
+"""CfC promotion benchmark.
 
 This gate compares DLQR, the current promoted direct-CfC checkpoint, and one
 or more candidate direct-CfC checkpoints through the canonical batched runner
@@ -21,7 +21,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
+from audit_calibration import make_calibrated_twin  # noqa: E402
 
 from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
@@ -350,7 +350,7 @@ def summarize_controller(
         for value in probe_results.values()
     )
     m5_ratio = float(probe_ratios["m5_thermal_ramp"])
-    gate_pass = bool(
+    passed = bool(
         m5_ratio <= CURRENT_PROMOTED_M5_RATIO
         and robust_ties == 5
         and rf_abs_max < 0.95 * RF_LIMIT_HZ
@@ -363,13 +363,13 @@ def summarize_controller(
         "probe_ratios": probe_ratios,
         "robust_ties_or_wins": robust_ties,
         "rf_abs_max_Hz": rf_abs_max,
-        "gate_pass": gate_pass,
-        "promotion_decision": "promote" if gate_pass else "do_not_promote",
+        "passed": passed,
+        "promotion_decision": "promote" if passed else "do_not_promote",
     }
 
 
 def run_gate(args: argparse.Namespace) -> dict[str, Any]:
-    """Run the M11 gate and write non-overwriting artifacts."""
+    """Run the CfC benchmark and write non-overwriting artifacts."""
     duration_s = float(args.duration_s)
     baseline_checkpoint = resolve_project_path(args.baseline_checkpoint) if (
         args.baseline_checkpoint
@@ -403,7 +403,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
     }
     candidate_labels = [label for label in labels if label != "current_promoted"]
     promoted_candidates = [
-        label for label in candidate_labels if summaries[label]["gate_pass"]
+        label for label in candidate_labels if summaries[label]["passed"]
     ]
     best_label = min(
         labels,
@@ -412,7 +412,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             -summaries[item]["robust_ties_or_wins"],
         ),
     )
-    gate_pass = bool(promoted_candidates)
+    passed = bool(promoted_candidates)
     gate_doc = {
         "milestone": "M11",
         "duration_s": duration_s,
@@ -433,7 +433,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         },
         "summaries": summaries,
         "best_label": best_label,
-        "gate_pass": gate_pass,
+        "passed": passed,
         "promotion_decision": (
             f"promote:{promoted_candidates[0]}"
             if promoted_candidates
@@ -441,13 +441,13 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "results": probes,
     }
-    out_path = _PROJECT_ROOT / "data" / "gate_M11.json"
+    out_path = _PROJECT_ROOT / "data" / "eval_cfc.json"
     out_path.write_text(json.dumps(_json_safe(gate_doc), indent=2), encoding="utf-8")
     for label in labels:
         label_slug = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in label)
         label_doc = dict(gate_doc)
         label_doc["public_summary"] = summaries[label]
-        label_path = _PROJECT_ROOT / "data" / f"gate_M11_{label_slug}.json"
+        label_path = _PROJECT_ROOT / "data" / f"eval_cfc_{label_slug}.json"
         label_path.write_text(json.dumps(_json_safe(label_doc), indent=2), encoding="utf-8")
     log(f"wrote {out_path}")
     return gate_doc

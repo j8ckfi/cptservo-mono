@@ -1,4 +1,4 @@
-"""FFT analysis helpers for the M3 pilot-probe gate.
+"""FFT analysis helpers for the pilot-probe FFT analysis.
 
 The pilot probe injects a deterministic 1 Hz, 10 Hz-amplitude sinusoid on
 ``rf_actual`` (in-loop, before ``twin.step``). The four required measurements:
@@ -87,7 +87,7 @@ def cancellation_phase_deg(
 
     For a well-behaved closed loop, rf_cmd should be ~180 deg out of phase
     with the pilot (controller commands the opposite of the disturbance to
-    cancel it). A phase of 180 ± 45 deg is the gate threshold.
+    cancel it). A phase of 180 ± 45 deg is the benchmark threshold.
 
     Returns:
         Phase in degrees, wrapped to (-180, 180].

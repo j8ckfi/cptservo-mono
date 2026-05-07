@@ -1,11 +1,11 @@
-"""M7 gate: PPO vs PI head-to-head on thermal_ramp AND all_stacked.
+"""PPO benchmark: PPO vs PI head-to-head on thermal_ramp AND all_stacked.
 
 Runs PPO (loaded from models/ppo_best.zip) and PI on two scenarios for 1000 s.
-Computes σ_y at τ ∈ {1, 10, 100} s.  Writes data/gate_M7.json.
+Computes σ_y at τ ∈ {1, 10, 100} s.  Writes data/eval_ppo.json.
 
 Gate pass criterion (M7 spec):
     PPO σ_y ≤ PI σ_y on thermal_ramp at τ=10 s.
-    (This matches the DLQR M5 gate threshold — the primary RL headline.)
+    (This matches the DLQR DLQR-vs-PI benchmark threshold — the primary RL headline.)
     Bonus: PPO matches DLQR within 50 % on thermal_ramp at τ=10 s.
 
 Anti-fudge discipline
@@ -42,7 +42,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import make_calibrated_twin, run_fast_loop  # noqa: E402
+from audit_calibration import make_calibrated_twin, run_fast_loop  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
 from cptservo.policy.ml_research import read_rhlqr_reference  # noqa: E402
@@ -59,7 +59,7 @@ EVAL_TAUS: list[float] = [1.0, 10.0, 100.0]
 RNG_SEED: int = 42
 RF_LIMIT_HZ: float = 1_000.0
 
-# M5 DLQR sigma_y at tau=10s on thermal_ramp, loaded from data/gate_M5.json.
+# M5 DLQR sigma_y at tau=10s on thermal_ramp, loaded from data/eval_dlqr_vs_pi.json.
 _DLQR_SIGMA_Y_10S_THERMAL: float = read_rhlqr_reference(_PROJECT_ROOT)
 
 
@@ -391,10 +391,10 @@ def run_scenario(
 
 
 def run_head_to_head() -> dict[str, Any]:
-    """Run PI and PPO on thermal_ramp and all_stacked; return gate metrics."""
+    """Run PI and PPO on thermal_ramp and all_stacked; return benchmark metrics."""
     from stable_baselines3 import PPO
 
-    log("=== M7 gate: PPO vs PI on thermal_ramp + all_stacked ===")
+    log("=== PPO benchmark: PPO vs PI on thermal_ramp + all_stacked ===")
     log(f"  duration={DURATION_S}s, taus={EVAL_TAUS}, disc_noise={DISC_NOISE_AMP_CI:.0e}")
 
     best_model_path = _PROJECT_ROOT / "models" / "ppo_best.zip"
@@ -547,7 +547,7 @@ def main() -> None:
     data_dir = _PROJECT_ROOT / "data"
     data_dir.mkdir(exist_ok=True)
 
-    log("=== M7 gate script start ===")
+    log("=== PPO benchmark script start ===")
 
     # 1. Head-to-head simulation (thermal_ramp + all_stacked)
     hth = run_head_to_head()
@@ -559,10 +559,10 @@ def main() -> None:
     ruff_clean = run_ruff()
 
     # 4. Gate verdict: PPO <= PI on thermal_ramp at tau=10s (primary criterion)
-    gate_pass_sim = hth["ppo_wins_tr_10s"]
-    gate_pass = bool(gate_pass_sim and tests_pass and ruff_clean)
+    passed_sim = hth["ppo_wins_tr_10s"]
+    passed = bool(passed_sim and tests_pass and ruff_clean)
 
-    log("=== M7 gate verdict ===")
+    log("=== PPO benchmark verdict ===")
     log(f"  thermal_ramp tau=10s:  PI={hth['pi_tr_10s']:.3e}  PPO={hth['ppo_tr_10s']:.3e}")
     log(f"  speedup_at_10s        = {hth['speedup_tr_10s']:.3f}")
     log(f"  ppo_wins_tr_10s       = {hth['ppo_wins_tr_10s']}")
@@ -573,12 +573,12 @@ def main() -> None:
     log(f"  all_stacked tau=100s: PI={hth['pi_ast_100s']:.3e}  PPO={hth['ppo_ast_100s']:.3e}")
     log(f"  tests_passed          = {tests_pass} ({n_passed}/{n_total})")
     log(f"  ruff_clean            = {ruff_clean}")
-    log(f"  gate_pass             = {gate_pass}")
+    log(f"  passed             = {passed}")
 
     # 5. Load training metrics for embedding
     train_metrics = load_training_metrics()
 
-    # 6. Write gate JSON (M7 spec schema)
+    # 6. Write benchmark JSON (M7 spec schema)
     gate_doc: dict[str, Any] = {
         "milestone": "M7",
         "policy_type": "PPO_MlpPolicy",
@@ -617,7 +617,7 @@ def main() -> None:
         "tests_passed": tests_pass,
         "n_tests_passed": n_passed,
         "ruff_clean": ruff_clean,
-        "gate_pass": gate_pass,
+        "passed": passed,
     }
 
     # Document gap if PPO fails to match PI on thermal_ramp tau=10s
@@ -648,11 +648,11 @@ def main() -> None:
             ),
         }
 
-    out_path = data_dir / "gate_M7.json"
+    out_path = data_dir / "eval_ppo.json"
     out_path.write_text(json.dumps(gate_doc, indent=2), encoding="utf-8")
     log(f"Wrote {out_path}")
 
-    verdict = "GATE PASS" if gate_pass else "GATE FAIL"
+    verdict = "BENCHMARK PASS" if passed else "BENCHMARK FAIL"
     log(f"\n{'=' * 60}")
     log(f"  M7 {verdict}")
     log(

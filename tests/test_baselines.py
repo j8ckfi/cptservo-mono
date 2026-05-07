@@ -360,9 +360,10 @@ def test_rhlqr_locks_in_closed_loop() -> None:
     # Both controllers should produce sigma_y in a physically reasonable range
     # for a 5-second clean run with no injected discriminator noise. With the
     # noise budget off, the loop is essentially noise-free and both controllers
-    # produce numerical-floor sigma_y values; the meaningful M5 vs M3 gates
-    # (which DO inject disc noise per Knappe 2004) live in run_m5_gate.py and
-    # the M3 audit. This test is a sanity check that LQR closes the loop.
+    # produce numerical-floor sigma_y values; the meaningful evaluations
+    # (which DO inject disc noise per Knappe 2004) live in eval_dlqr_vs_pi.py
+    # and the calibration audit. This test is a sanity check that DLQR closes
+    # the loop.
     assert lqr_sigma < 1.0e-9, (
         f"DLQR sigma_y(1s) should be physically bounded; got {lqr_sigma:.3e}"
     )

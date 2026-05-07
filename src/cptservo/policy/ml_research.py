@@ -164,7 +164,7 @@ def fit_obs_stats(model: MLServoController, obs: np.ndarray) -> None:
 
 def read_rhlqr_reference(project_root: Path) -> float:
     """Read the current M5 DLQR tau=10s reference."""
-    path = project_root / "data" / "gate_M5.json"
+    path = project_root / "data" / "eval_dlqr_vs_pi.json"
     data = json.loads(path.read_text(encoding="utf-8-sig"))
     for key in (
         "dlqr_sigma_y_10s",

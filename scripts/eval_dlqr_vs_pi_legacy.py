@@ -1,6 +1,6 @@
-"""M5 gate: receding-horizon LQR vs PI head-to-head on thermal_ramp scenario.
+"""DLQR-vs-PI benchmark: receding-horizon LQR vs PI head-to-head on thermal_ramp scenario.
 
-This script runs the M5 audit gate per the plan:
+This script runs the M5 audit per the plan:
 
   Gate: DLQR <= PI sigma_y at tau=100s on `thermal_ramp`.
 
@@ -28,7 +28,7 @@ Anti-fudge discipline
 
 Output
 ------
-data/gate_M5.json with the schema defined in the M5 PRD story US-M5.
+data/eval_dlqr_vs_pi.json with the schema defined in the M5 PRD story US-M5.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import make_calibrated_twin, run_fast_loop  # noqa: E402
+from audit_calibration import make_calibrated_twin, run_fast_loop  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
 from cptservo.baselines.dlqr import DLQRController  # noqa: E402
@@ -67,7 +67,7 @@ def log(msg: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Gate parameters (frozen — must not be changed to pass the gate)
+# Gate parameters (frozen — must not be changed to pass the benchmark)
 # ---------------------------------------------------------------------------
 
 DISC_NOISE_AMP_CI: float = 7.0e-4  # from configs/v1_recipe.yaml, calibrated Knappe 2004
@@ -84,7 +84,7 @@ SCENARIO: str = "thermal_ramp"
 
 def run_head_to_head() -> dict:
     """Run PI and DLQR on thermal_ramp; return comparison metrics."""
-    log("=== M5 gate: DLQR vs PI on thermal_ramp ===")
+    log("=== DLQR-vs-PI benchmark: DLQR vs PI on thermal_ramp ===")
     log(f"  scenario={SCENARIO}, duration={DURATION_S}s, tau_gate={TAU_S}s")
     log(f"  disc_noise_amp_ci={DISC_NOISE_AMP_CI:.0e}, seed={RNG_SEED}")
 
@@ -228,7 +228,7 @@ def main() -> None:
     data_dir = _PROJECT_ROOT / "data"
     data_dir.mkdir(exist_ok=True)
 
-    log("=== M5 gate script start ===")
+    log("=== DLQR-vs-PI benchmark script start ===")
 
     # 1. Head-to-head simulation
     hth = run_head_to_head()
@@ -241,15 +241,15 @@ def main() -> None:
     ruff_clean = run_ruff()
 
     # 4. Gate verdict
-    gate_pass = bool(hth["dlqr_wins"] and tests_pass and ruff_clean)
+    passed = bool(hth["dlqr_wins"] and tests_pass and ruff_clean)
 
-    log("=== M5 gate verdict ===")
+    log("=== DLQR-vs-PI benchmark verdict ===")
     log(f"  dlqr_wins      = {hth['dlqr_wins']}")
     log(f"  tests_passed     = {tests_pass} ({n_passed}/{n_total})")
     log(f"  ruff_clean       = {ruff_clean}")
-    log(f"  gate_pass        = {gate_pass}")
+    log(f"  passed        = {passed}")
 
-    # 5. Write gate JSON
+    # 5. Write benchmark JSON
     q_diag = list(lqr.Q)
     k_rf = float(lqr.K[0, 0])   # gain on ci state (the observable)
     k_int = float(lqr.K[0, 1])  # gain on integrator state
@@ -299,14 +299,14 @@ def main() -> None:
         "n_tests_passed": n_passed,
         "n_tests_total": n_total,
         "ruff_clean": ruff_clean,
-        "gate_pass": gate_pass,
+        "passed": passed,
     }
 
-    out_path = data_dir / "gate_M5.json"
+    out_path = data_dir / "eval_dlqr_vs_pi.json"
     out_path.write_text(json.dumps(gate_doc, indent=2), encoding="utf-8")
     log(f"Wrote {out_path}")
 
-    verdict = "GATE PASS" if gate_pass else "GATE FAIL"
+    verdict = "BENCHMARK PASS" if passed else "BENCHMARK FAIL"
     log(f"\n{'='*50}")
     log(f"  M5 {verdict}")
     log(f"  sigma_y({TAU_S:.0f}s) PI={hth['pi_sigma']:.3e}  DLQR={hth['lqr_sigma']:.3e}")

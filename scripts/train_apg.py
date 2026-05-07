@@ -17,7 +17,7 @@ Best (final) model saved to models/apg_best.pt.
 Usage
 -----
     cd /c/Users/Jack/Documents/Research/WIP/CPTServo
-    python scripts/m6_apg_train.py
+    python scripts/train_apg.py
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import log, make_calibrated_twin  # noqa: E402
+from audit_calibration import log, make_calibrated_twin  # noqa: E402
 
 from cptservo.policy.apg import APGPolicy  # noqa: E402
 from cptservo.policy.training import _collect_obs_stats, train_curriculum  # noqa: E402

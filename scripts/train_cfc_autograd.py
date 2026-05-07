@@ -23,8 +23,8 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from apg_autograd_retry import _env_at, _run_teacher_errors, evaluate_controller  # noqa: E402
-from cfc_direct_train import initialize_structured_direct  # noqa: E402
+from train_apg_autograd import _env_at, _run_teacher_errors, evaluate_controller  # noqa: E402
+from train_cfc_direct import initialize_structured_direct  # noqa: E402
 
 from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.policy.ml_research import (  # noqa: E402

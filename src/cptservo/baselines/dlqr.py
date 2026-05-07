@@ -78,7 +78,7 @@ from scipy.linalg import solve_discrete_are
 # Q tuned to match PI's bandwidth at 1 Hz (proportional gain ~6.5e3 for pilot
 # suppression) while preserving the integral-aggressive bias that gives LQR
 # its thermal_ramp advantage. Bumped from initial seed (1e6, 1e8) which gave
-# K=[10, 10000] — too narrow bandwidth, failed pilot probe gate.
+# K=[10, 10000] — too narrow bandwidth, failed pilot-probe check.
 _DEFAULT_Q: tuple[float, float] = (1.0e12, 1.0e10)
 _DEFAULT_R: float = 1.0
 _DEFAULT_DT: float = 0.001          # 1 kHz control rate (matches PI default)
@@ -352,7 +352,7 @@ class DLQRController:
 
     @classmethod
     def from_calibration(cls, calibration_path: str | Path) -> DLQRController:
-        """Load parameters stored in a gate JSON (for reproducibility).
+        """Load parameters stored in a benchmark JSON (for reproducibility).
 
         Args:
             calibration_path: Path to a JSON file with ``Q_diag``, ``R``, and

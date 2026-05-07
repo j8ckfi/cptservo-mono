@@ -175,7 +175,7 @@ def train_ppo(
         n_envs: Number of parallel environments.
 
     Returns:
-        Dict with training metrics for embedding in gate_M7.json.
+        Dict with training metrics for embedding in eval_ppo.json.
     """
     models_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)

@@ -22,8 +22,8 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
-from run_m11_gate import (  # noqa: E402
+from audit_calibration import make_calibrated_twin  # noqa: E402
+from eval_cfc import (  # noqa: E402
     DISC_NOISE_AMP_CI,
     PHYSICS_RATE_HZ,
     BatchDispatchController,
@@ -552,7 +552,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         },
         "top": scored[: args.top_k],
         "best": scored[0],
-        "gate_pass": bool(
+        "passed": bool(
             scored[0]["m5_ratio"] <= CURRENT_M11_RATIO
             and scored[0]["robust_ties_or_wins_of_5"] == 5
         ),

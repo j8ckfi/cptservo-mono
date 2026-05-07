@@ -1,6 +1,6 @@
-"""M6 gate: APG policy vs PI head-to-head on all_stacked scenario.
+"""APG benchmark: APG policy vs PI head-to-head on all_stacked scenario.
 
-Gate criterion: APG sigma_y(tau=100s) < 0.8 * PI sigma_y(tau=100s) on
+Acceptance criterion: APG sigma_y(tau=100s) < 0.8 * PI sigma_y(tau=100s) on
 ``all_stacked``.
 
 Architecture
@@ -14,11 +14,11 @@ Anti-fudge discipline
 * Same twin, same disturbance trace, same disc_noise_amp_ci for both runs.
 * No post-loop additive noise.
 * sigma_y computed from overlapping Allan deviation on the demeaned y series.
-* Gate criterion hard-coded; not adjusted post-hoc.
+* Acceptance criterion hard-coded; not adjusted post-hoc.
 
 Output
 ------
-data/gate_M6.json
+data/eval_apg.json
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import log, make_calibrated_twin, run_fast_loop  # noqa: E402
+from audit_calibration import log, make_calibrated_twin, run_fast_loop  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
 from cptservo.policy.apg import APGPolicy  # noqa: E402
@@ -74,7 +74,7 @@ def run_head_to_head(apg_path: Path | None = None) -> dict:
     if apg_path is None:
         apg_path = _PROJECT_ROOT / "models" / "apg_best.pt"
 
-    log(f"=== M6 gate: APG vs PI on {SCENARIO} ===")
+    log(f"=== APG benchmark: APG vs PI on {SCENARIO} ===")
     log(f"  scenario={SCENARIO}, duration={DURATION_S}s")
     log(f"  disc_noise_amp_ci={DISC_NOISE_AMP_CI:.0e}, seed={RNG_SEED}")
     log(f"  gate: APG sigma_y({GATE_TAU:.0f}s) < {GATE_RATIO_THRESHOLD} * PI")
@@ -83,7 +83,7 @@ def run_head_to_head(apg_path: Path | None = None) -> dict:
     if not apg_path.exists():
         raise FileNotFoundError(
             f"APG checkpoint not found: {apg_path}\n"
-            "Run scripts/m6_apg_train.py first."
+            "Run scripts/train_apg.py first."
         )
 
     # Load APG policy
@@ -158,14 +158,14 @@ def run_head_to_head(apg_path: Path | None = None) -> dict:
     ratio_at_100s = apg_100s / pi_100s if pi_100s > 0.0 else float("nan")
     speedup_at_100s = pi_100s / apg_100s if apg_100s > 0.0 else float("nan")
 
-    gate_pass_sim = bool(ratio_at_100s < GATE_RATIO_THRESHOLD)
+    passed_sim = bool(ratio_at_100s < GATE_RATIO_THRESHOLD)
 
     log(f"  sigma_y(1s):   PI={pi_1s:.3e}  APG={apg_1s:.3e}")
     log(f"  sigma_y(10s):  PI={pi_10s:.3e}  APG={apg_10s:.3e}")
     log(f"  sigma_y(100s): PI={pi_100s:.3e}  APG={apg_100s:.3e}")
     log(f"  ratio APG/PI at 100s: {ratio_at_100s:.3f}  (gate<{GATE_RATIO_THRESHOLD})")
     log(f"  speedup at 100s: {speedup_at_100s:.2f}x")
-    log(f"  gate_pass_sim = {gate_pass_sim}")
+    log(f"  passed_sim = {passed_sim}")
 
     return {
         "pi_sigma_y_1s": pi_1s,
@@ -176,7 +176,7 @@ def run_head_to_head(apg_path: Path | None = None) -> dict:
         "apg_sigma_y_100s": apg_100s,
         "ratio_apg_to_pi_100s": ratio_at_100s,
         "apg_speedup_at_100s": speedup_at_100s,
-        "gate_pass_sim": gate_pass_sim,
+        "passed_sim": passed_sim,
         "pi_wall_s": t_pi_wall,
         "apg_wall_s": t_apg_wall,
         "policy": policy,
@@ -247,7 +247,7 @@ def main() -> None:
     data_dir = _PROJECT_ROOT / "data"
     data_dir.mkdir(exist_ok=True)
 
-    log("=== M6 gate script start ===")
+    log("=== APG benchmark script start ===")
 
     # 1. Head-to-head simulation
     hth = run_head_to_head()
@@ -263,15 +263,15 @@ def main() -> None:
     train_metrics = load_training_metrics()
 
     # 5. Gate verdict
-    gate_pass = bool(hth["gate_pass_sim"] and tests_pass and ruff_clean)
+    passed = bool(hth["passed_sim"] and tests_pass and ruff_clean)
 
-    log("\n=== M6 gate verdict ===")
-    log(f"  apg_beats_pi_20pct = {hth['gate_pass_sim']}")
+    log("\n=== APG benchmark verdict ===")
+    log(f"  apg_beats_pi_20pct = {hth['passed_sim']}")
     log(f"  tests_passed       = {tests_pass} ({n_passed}/{n_total})")
     log(f"  ruff_clean         = {ruff_clean}")
-    log(f"  gate_pass          = {gate_pass}")
+    log(f"  passed          = {passed}")
 
-    # 6. Write gate JSON
+    # 6. Write benchmark JSON
     gate_doc = {
         "milestone": "M6",
         "policy_type": "APG_MLP",
@@ -307,21 +307,21 @@ def main() -> None:
             f"APG sigma_y({GATE_TAU:.0f}s) < {GATE_RATIO_THRESHOLD} * PI sigma_y({GATE_TAU:.0f}s)"
             f" on {SCENARIO}"
         ),
-        "gate_criterion_met": hth["gate_pass_sim"],
+        "criterion_met": hth["passed_sim"],
         "tests_passed": tests_pass,
         "n_tests_passed": n_passed,
         "n_tests_total": n_total,
         "ruff_clean": ruff_clean,
-        "gate_pass": gate_pass,
+        "passed": passed,
         "pi_wall_s": hth["pi_wall_s"],
         "apg_wall_s": hth["apg_wall_s"],
     }
 
-    out_path = data_dir / "gate_M6.json"
+    out_path = data_dir / "eval_apg.json"
     out_path.write_text(json.dumps(gate_doc, indent=2), encoding="utf-8")
     log(f"\nWrote {out_path}")
 
-    verdict = "GATE PASS" if gate_pass else "GATE FAIL"
+    verdict = "BENCHMARK PASS" if passed else "BENCHMARK FAIL"
     log(f"\n{'='*50}")
     log(f"  M6 {verdict}")
     log(f"  sigma_y(100s): PI={hth['pi_sigma_y_100s']:.3e}  APG={hth['apg_sigma_y_100s']:.3e}")

@@ -19,7 +19,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 sys.path.insert(0, str(_PROJECT_ROOT / "scripts"))
 
-from run_m3_m4_gates import log, make_calibrated_twin  # noqa: E402
+from audit_calibration import log, make_calibrated_twin  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
 from cptservo.baselines.dlqr import DLQRController  # noqa: E402
@@ -64,9 +64,9 @@ def _run_controller(controller: Any) -> dict[str, Any]:
     }
 
 
-def run_m5_gate() -> dict[str, Any]:
-    """Run PI and DLQR/DLQR on the same thermal-ramp trace."""
-    log("M5: DLQR/DLQR baseline gate")
+def evaluate_dlqr_vs_pi() -> dict[str, Any]:
+    """Run PI and DLQR on the same thermal-ramp trace."""
+    log("DLQR vs PI head-to-head benchmark")
     log(
         f"  scenario={SCENARIO}, duration={DURATION_S}s, "
         f"disc_noise_amp_ci={DISC_NOISE_AMP_CI:.1e}, seed={RNG_SEED}"
@@ -84,7 +84,7 @@ def run_m5_gate() -> dict[str, Any]:
         f"wall={pi_metrics['wall_s']:.1f}s"
     )
 
-    log("  DLQR/DLQR closed-loop ...")
+    log("  DLQR closed-loop ...")
     lqr_metrics = _run_controller(lqr)
     log(
         f"    sigma_y(10s)={lqr_metrics['sigma_y_10s']:.3e}, "
@@ -95,15 +95,10 @@ def run_m5_gate() -> dict[str, Any]:
     lqr_10 = lqr_metrics["sigma_y_10s"]
     speedup = pi_10 / lqr_10 if np.isfinite(pi_10) and lqr_10 > 0.0 else float("nan")
     lqr_wins = bool(np.isfinite(speedup) and speedup > 1.0)
-    gate_pass = lqr_wins
+    passed = lqr_wins
 
-    gate: dict[str, Any] = {
-        "milestone": "M5",
-        "controller_label": "DLQR/DLQR",
-        "controller_note": (
-            "Historical DLQR name retained; implementation is steady-state "
-            "two-state DLQR, not iterative online MPC."
-        ),
+    result: dict[str, Any] = {
+        "controller_label": "DLQR",
         "Q_diag": list(lqr.Q),
         "R": lqr.R,
         "control_dt_s": lqr.control_dt_s,
@@ -115,23 +110,23 @@ def run_m5_gate() -> dict[str, Any]:
         "disc_noise_amp_ci": DISC_NOISE_AMP_CI,
         "noise_injection_point": pi_metrics["noise_injection_point"],
         "pi_sigma_y_1s_thermal": pi_metrics["sigma_y_1s"],
-        "rhlqr_sigma_y_1s_thermal": lqr_metrics["sigma_y_1s"],
+        "dlqr_sigma_y_1s_thermal": lqr_metrics["sigma_y_1s"],
         "pi_sigma_y_10s_thermal": pi_10,
-        "rhlqr_sigma_y_10s_thermal": lqr_10,
+        "dlqr_sigma_y_10s_thermal": lqr_10,
         "thermal_win_factor_pi_over_lqr": speedup,
-        "rhlqr_wins_on_thermal_at_tau10s": lqr_wins,
+        "dlqr_wins_on_thermal_at_tau10s": lqr_wins,
         "pi_wall_s": pi_metrics["wall_s"],
         "lqr_wall_s": lqr_metrics["wall_s"],
         "tests_passed": None,
         "ruff_clean": None,
-        "gate_pass": gate_pass,
+        "passed": passed,
     }
 
     log(
-        f"  M5 tau=10s: PI={pi_10:.3e}, LQR={lqr_10:.3e}, "
-        f"speedup={speedup:.3f}, gate_pass={gate_pass}"
+        f"  tau=10s: PI={pi_10:.3e}, DLQR={lqr_10:.3e}, "
+        f"speedup={speedup:.3f}, passed={passed}"
     )
-    return gate
+    return result
 
 
 def main() -> None:
@@ -139,12 +134,12 @@ def main() -> None:
     data_dir = _PROJECT_ROOT / "data"
     data_dir.mkdir(exist_ok=True)
 
-    gate = run_m5_gate()
-    out_path = data_dir / "gate_M5.json"
-    out_path.write_text(json.dumps(gate, indent=2), encoding="utf-8")
+    result = evaluate_dlqr_vs_pi()
+    out_path = data_dir / "eval_dlqr_vs_pi.json"
+    out_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
     log(f"Wrote {out_path}")
     log(f"Total wall time: {time.perf_counter() - t_start:.1f}s")
-    log(f"GATE {'PASS' if gate['gate_pass'] else 'FAIL'}")
+    log(f"BENCHMARK {'PASS' if result['passed'] else 'FAIL'}")
 
 
 if __name__ == "__main__":

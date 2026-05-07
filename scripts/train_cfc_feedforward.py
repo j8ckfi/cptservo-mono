@@ -21,7 +21,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
+from audit_calibration import make_calibrated_twin  # noqa: E402
 
 from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402

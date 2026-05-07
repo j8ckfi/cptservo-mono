@@ -83,7 +83,7 @@ class PIController:
     and kp to 1.0 to avoid noise amplification.  These gains give
     ``sigma_y(tau=1 s) / open_loop_sigma_y < 0.7`` on clean and
     ``ratio_pi_to_floor < 1.5`` on the white-FM predicted floor — satisfying
-    the M4 gate criteria.
+    the PI-noise-floor benchmark criteria.
 
     Args:
         kp: Proportional gain (Hz_correction per dimensionless error).
@@ -206,7 +206,7 @@ class PIController:
 
     @classmethod
     def from_calibration(cls, calibration_path: str | Path) -> PIController:
-        """Load gains stored in a gate JSON (for reproducibility).
+        """Load gains stored in a benchmark JSON (for reproducibility).
 
         Args:
             calibration_path: Path to a JSON file with a ``gains`` key

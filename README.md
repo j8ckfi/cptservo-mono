@@ -18,15 +18,15 @@ pip install -e .[dev]
 
 Python >= 3.10. Pulls in PyTorch and `stable-baselines3`.
 
-## Quick start: run the headline gate
+## Quick start: evaluate the shipped CfC controller
 
 ```bash
-python scripts/run_m11_gate.py --duration-s 100
+python scripts/eval_cfc.py --duration-s 100
 ```
 
-That evaluates the shipped CfC checkpoint
-(`data/cfc_direct_T1p5_kp1p5_ki1p0.json`) against DLQR on the M5 thermal-ramp
-benchmark plus four robustness probes, and writes `data/gate_M11.json`.
+Evaluates the shipped CfC checkpoint
+(`data/cfc_direct_T1p5_kp1p5_ki1p0.json`) against DLQR on the thermal-ramp
+benchmark plus four robustness probes, and writes `data/eval_cfc.json`.
 
 ## Headline number
 
@@ -38,35 +38,36 @@ benchmark plus four robustness probes, and writes `data/gate_M11.json`.
 
 3.18% nominal win for the CfC over DLQR. 4/5 robustness probes tie or win;
 loses `ood_3x_thermal_slope` by 0.62% (just past the 0.5% tie band), so the
-strict 5/5 promotion gate returns `do_not_promote`.
+strict 5/5 promotion criterion returns `do_not_promote`.
 
 ## Train a new CfC
 
 ```bash
 # Distill from a DLQR teacher (no autograd):
-python scripts/cfc_direct_train.py
+python scripts/train_cfc_direct.py
 
 # Optional autograd refinement of the recurrent matrices:
-python scripts/cfc_autograd_train.py
+python scripts/train_cfc_autograd.py
 
 # Sweep (k_T, kp_scale, k_dT) — the headline came from this:
-python scripts/cfc_improvement_campaign.py \
+python scripts/sweep_cfc.py \
     --screen-duration-s 25 --max-specs 32 --batch-size 32
 ```
 
-## Other gates
+## Other evaluations
 
 | Script | What it does |
 |---|---|
-| `scripts/compute_m2_surface.py` | Recompute the OBE surface + tier-2 calibration |
-| `scripts/run_m5_gate.py` | DLQR vs PI head-to-head (M5) |
-| `scripts/m8_adversarial.py` | Adversarial robustness battery (classical track) |
-| `scripts/ml_m8_gate.py` | Same battery for an ML controller checkpoint |
-| `scripts/m6_apg_train.py` / `m6_apg_gate.py` | APG attempt (documented partial) |
-| `scripts/m7_ppo_train.py` / `m7_ppo_gate.py` | PPO attempt (~40x behind PI) |
-| `scripts/lnn_m11_campaign.py` | Alpha-beta / liquid-observer sweep |
+| `scripts/calibrate_twin.py` | Recompute the OBE surface + tier-2 calibration |
+| `scripts/audit_calibration.py` | Calibration audit + PI noise-floor evaluation |
+| `scripts/eval_dlqr_vs_pi.py` | DLQR vs PI head-to-head |
+| `scripts/eval_adversarial.py` | Adversarial robustness battery (classical track) |
+| `scripts/eval_adversarial_ml.py` | Same battery for an ML controller checkpoint |
+| `scripts/train_apg.py` / `eval_apg.py` | APG attempt (documented partial) |
+| `scripts/train_ppo.py` / `eval_ppo.py` | PPO attempt (~40x behind PI) |
+| `scripts/sweep_lnn.py` | Alpha-beta / liquid-observer sweep |
 
-Each gate writes `data/gate_M{N}.json`.
+Each evaluation writes a JSON to `data/`.
 
 ## Tests
 
@@ -85,16 +86,16 @@ src/cptservo/
   evaluation/    closed-loop and batched runners
   calibration/   tier-2 fit helpers
 src/rbspec/      vendored Rb-87 constants
-scripts/         gate drivers, training, sweeps
+scripts/         calibrate_*, eval_*, train_*, sweep_*
 tests/           pytest suite
 configs/         YAML run recipes
 data/            calibration fixtures + the shipped CfC checkpoint
 ```
 
-`data/` ships only what the gates need to run: `obe_surface.h5`,
-`reduced_calibration.json`, `published_allan.json`, the pinned `gate_M5.json`
-reference, and the promoted CfC checkpoint. All other `gate_M*.json` files are
-generated.
+`data/` ships only what the benchmarks need to run: `obe_surface.h5`,
+`reduced_calibration.json`, `published_allan.json`, the pinned
+`eval_dlqr_vs_pi.json` reference, and the promoted CfC checkpoint. All other
+`eval_*.json` files are generated.
 
 ## License
 

@@ -1,14 +1,14 @@
-"""Measure M1 gate metrics for the ralph reviewer.
+"""Measure smoke benchmark metrics for the ralph reviewer.
 
 Two metrics are produced:
 
 1. **single_trace_realtime_factor**: 1 sim-second / wall-second at batch_size=1.
-   Reported for transparency; included in the JSON. *Not* the gate metric.
+   Reported for transparency; included in the JSON. *Not* the benchmark metric.
 
 2. **batched_sample_seconds_per_wall_second**: sample-seconds of simulated
    physics produced per wall-second at batch_size=B. This is the metric RL/APG
    training depends on (training runs B parallel rollouts at once). The M1
-   gate threshold is 100; the original PRD wording ("twin_realtime_factor_4070
+   acceptance threshold is 100; the original PRD wording ("twin_realtime_factor_4070
    >= 100") is interpreted as this batched metric.
 
 3. **sigma_y(tau=1 s)** at batch_size=1 over a 100 s open-loop clean trace.
@@ -140,7 +140,7 @@ def main() -> None:
 
     # ---------------------------------------------------------------------
     # Throughput across (device, batch). Pick the configuration with the
-    # highest sample_seconds_per_wall_second as the gate value, and report
+    # highest sample_seconds_per_wall_second as the benchmark value, and report
     # all numbers for transparency.
     # ---------------------------------------------------------------------
     configs: list[tuple[str, int]] = [("cpu", 1), ("cpu", 64), ("cpu", 1024)]
@@ -174,12 +174,12 @@ def main() -> None:
     sigma_y_1s, fm_floor_1s, ratio, sim_wall_s = measure_noise_floor(device="cpu")
 
     # ---------------------------------------------------------------------
-    # Compose gate JSON.
+    # Compose benchmark JSON.
     # ---------------------------------------------------------------------
-    litscan_path = data_dir / "gate_M1_litscan.json"
+    litscan_path = data_dir / "eval_smoke_litscan.json"
     litscan = json.loads(litscan_path.read_text(encoding="utf-8-sig"))
 
-    gate = {
+    result = {
         "literature_scan_passed": litscan["literature_scan_passed"],
         "n_papers_reviewed": litscan["n_papers_reviewed"],
         "killer_papers": litscan["killer_papers"],
@@ -214,14 +214,14 @@ def main() -> None:
         },
         "tests_passed": True,
         "ruff_clean": True,
-        "gate_pass": (
+        "passed": (
             litscan["literature_scan_passed"]
             and best_batched >= 100.0
             and ratio < 3.0
         ),
     }
 
-    out_path = data_dir / "gate_M1.json"
+    out_path = data_dir / "eval_smoke.json"
     out_path.write_text(json.dumps(gate, indent=2), encoding="utf-8")
     log(f"[{time.strftime('%H:%M:%S')}] Wrote {out_path}")
     log(json.dumps(gate, indent=2))

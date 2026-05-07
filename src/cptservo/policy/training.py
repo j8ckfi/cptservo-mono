@@ -9,7 +9,7 @@ rollout window (equivalent to -log sigma_y for white-FM dominated noise).
 Truncated BPTT releases the graph every ``truncation_window`` physics steps
 to prevent memory explosion.
 
-Curriculum (from scripts/m6_apg_train.py):
+Curriculum (from scripts/train_apg.py):
     ``clean`` → ``thermal_ramp`` → ``b_field_drift`` → ``laser_intensity_drift``
     → ``all_stacked``
 

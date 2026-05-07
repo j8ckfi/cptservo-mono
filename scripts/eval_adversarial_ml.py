@@ -2,7 +2,7 @@
 
 This is the M8-style follow-up for the narrow M5 ML residual win.  It compares
 the promoted ``PhysicsResidualController`` directly against DLQR on a compact
-set of perturbation probes and writes ``data/gate_ML_M8.json``.
+set of perturbation probes and writes ``data/eval_adversarial_ml.json``.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
 
-from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
+from audit_calibration import make_calibrated_twin  # noqa: E402
 
 from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
@@ -203,7 +203,7 @@ def run_probe(
 
 
 def run_gate(args: argparse.Namespace) -> dict[str, Any]:
-    """Run the ML M8 gate and write the JSON artifact."""
+    """Run the ML adversarial benchmark and write the JSON artifact."""
     duration_s = float(args.duration_s)
     residual_config = PhysicsResidualConfig(
         k_T_Hz_per_K=args.k_T,
@@ -322,7 +322,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         1 for key in robustness_keys if probes[key]["ml_ties_or_wins_10s"]
     )
     m5_pass = bool(probes["m5_thermal_ramp"]["ml_ties_or_wins_10s"])
-    gate_pass = bool(m5_pass and n_robust_ties_or_wins >= 3)
+    passed = bool(m5_pass and n_robust_ties_or_wins >= 3)
     gate_doc = {
         "milestone": "ML_M8",
         "duration_s": duration_s,
@@ -333,13 +333,13 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         "results": probes,
         "m5_ml_ties_or_wins": m5_pass,
         "n_robust_ties_or_wins_of_5": n_robust_ties_or_wins,
-        "gate_pass": gate_pass,
+        "passed": passed,
         "gate_note": (
             "Full production-readiness claim requires duration_s >= 100 and "
             "paired review of all probe metrics."
         ),
     }
-    out_path = _PROJECT_ROOT / "data" / "gate_ML_M8.json"
+    out_path = _PROJECT_ROOT / "data" / "eval_adversarial_ml.json"
     out_path.write_text(json.dumps(_json_safe(gate_doc), indent=2), encoding="utf-8")
     log(f"wrote {out_path}")
     return gate_doc

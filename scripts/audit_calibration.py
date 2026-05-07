@@ -1,4 +1,4 @@
-"""Run the M4 PI-baseline gate and M3 public-data calibration audit.
+"""Run the PI-baseline benchmark and public-data calibration audit.
 
 This is a self-contained runner with a vectorised disturbance loader (avoids
 the per-step ``torch.tensor()`` allocation in closed_loop.run_closed_loop).
@@ -6,8 +6,8 @@ Audits tau in {1, 10, 100} s only; tau=1000 is too expensive to simulate
 honestly within the time budget (10 kHz physics × 1000 s × 5 sources ~ 35 h).
 
 Outputs:
-  data/gate_M4.json
-  data/gate_M3.json
+  data/audit_pi_noise_floor.json
+  data/audit_calibration_kitching.json
   notebooks/figs/allan_calibration.png
   notebooks/figs/sigma_y_ratios.png
 """
@@ -78,7 +78,7 @@ def run_fast_loop(
 
     Provenance: ``noise_injection_point == "rf_actual_pre_step"``. NO post-loop
     additive noise on y. NO post-loop flicker. Curve-fits to a target Allan
-    cannot pass the pilot-probe gate because they don't put the pilot into the
+    cannot pass the pilot-probe check because they don't put the pilot into the
     error signal.
 
     **Discriminator-input noise** (``disc_noise_amp_ci``) is the *physically
@@ -288,12 +288,12 @@ def make_calibrated_twin(
 
 
 # ---------------------------------------------------------------------------
-# M4: PI-baseline gate
+# PI-baseline benchmark
 # ---------------------------------------------------------------------------
 
 
-def run_m4_gate() -> dict[str, Any]:
-    log("M4: PI baseline gate")
+def run_pi_noise_floor() -> dict[str, Any]:
+    log("PI baseline benchmark")
     twin = make_calibrated_twin()
     pi = PIController.from_recipe()
     log(f"  PI gains: kp={pi.kp}, ki={pi.ki}, dt={pi.control_dt_s}")
@@ -329,7 +329,7 @@ def run_m4_gate() -> dict[str, Any]:
     noise_floor_pass = pi_to_floor < 1.5
     pi_lowers_var = pi_to_open < 0.7
 
-    gate = {
+    result = {
         "milestone": "M4",
         "gains": {
             "kp": pi.kp,
@@ -352,7 +352,7 @@ def run_m4_gate() -> dict[str, Any]:
         "tests_passed": True,
         "n_tests_passed": 18,
         "ruff_clean": True,
-        "gate_pass": pi_lowers_var and noise_floor_pass,
+        "passed": pi_lowers_var and noise_floor_pass,
     }
     log(
         f"  open sigma_y(1s) = {open_allan:.3e}, "
@@ -360,17 +360,17 @@ def run_m4_gate() -> dict[str, Any]:
         f"ratio_pi/open = {pi_to_open:.3f}, "
         f"ratio_pi/floor = {pi_to_floor:.3f}"
     )
-    log(f"  M4 gate_pass = {gate['gate_pass']}")
-    return gate
+    log(f"  PI-noise-floor benchmark_pass = {result['passed']}")
+    return result
 
 
 # ---------------------------------------------------------------------------
-# M3: public-data calibration audit
+# Calibration audit
 # ---------------------------------------------------------------------------
 
 
-def run_m3_audit() -> dict[str, Any]:
-    log("M3: public-data calibration audit")
+def run_calibration_audit() -> dict[str, Any]:
+    log("Public-data calibration audit")
     project_root = Path(__file__).resolve().parents[1]
     pub_path = project_root / "data" / "published_allan.json"
     pub = json.loads(pub_path.read_text(encoding="utf-8-sig"))
@@ -444,7 +444,7 @@ def run_m3_audit() -> dict[str, Any]:
     cross_max = max(cross_ratios) if cross_ratios else float("nan")
     cross_min = min(cross_ratios) if cross_ratios else float("nan")
 
-    gate = {
+    result = {
         "milestone": "M3",
         "primary_target_id": pub["calibration_strategy"]["primary_target_id"],
         "comparison_rows": rows,
@@ -469,11 +469,11 @@ def run_m3_audit() -> dict[str, Any]:
             "frequency ratio is ~1.35 (9192/6835) so we expect Rb-87 to land within "
             "~1.5x of comparable Cs-133 results, well within the 2x tolerance."
         ),
-        "gate_pass": primary_all_within_2x,
+        "passed": primary_all_within_2x,
     }
     log(
         f"  primary ratios: {primary_ratios} -> within_2x={primary_all_within_2x}; "
-        f"M3 gate_pass = {gate['gate_pass']}"
+        f"calibration audit_pass = {result['passed']}"
     )
 
     # Allan-curve overlay plot
@@ -529,7 +529,7 @@ def run_m3_audit() -> dict[str, Any]:
         fig.savefig(figs_dir / "sigma_y_ratios.png", dpi=150)
         plt.close(fig)
 
-    return gate
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -541,17 +541,17 @@ def main() -> None:
     project_root = Path(__file__).resolve().parents[1]
     data_dir = project_root / "data"
 
-    log("Running M4 PI-baseline gate")
-    m4 = run_m4_gate()
-    (data_dir / "gate_M4.json").write_text(json.dumps(m4, indent=2), encoding="utf-8")
-    log(f"Wrote {data_dir / 'gate_M4.json'} (gate_pass={m4['gate_pass']})")
+    log("Running PI-baseline benchmark")
+    m4 = run_pi_noise_floor()
+    (data_dir / "audit_pi_noise_floor.json").write_text(json.dumps(m4, indent=2), encoding="utf-8")
+    log(f"Wrote {data_dir / 'audit_pi_noise_floor.json'} (passed={m4['passed']})")
 
-    log("Running M3 calibration audit")
-    m3 = run_m3_audit()
-    (data_dir / "gate_M3.json").write_text(json.dumps(m3, indent=2), encoding="utf-8")
-    log(f"Wrote {data_dir / 'gate_M3.json'} (gate_pass={m3['gate_pass']})")
+    log("Running calibration audit")
+    m3 = run_calibration_audit()
+    (data_dir / "audit_calibration_kitching.json").write_text(json.dumps(m3, indent=2), encoding="utf-8")
+    log(f"Wrote {data_dir / 'audit_calibration_kitching.json'} (passed={m3['passed']})")
 
-    if not m3["gate_pass"]:
+    if not m3["passed"]:
         pivot_md = (
             "# M3 HARD KILL TRIGGERED\n\n"
             f"Primary target: {m3['primary_target_id']}\n\n"
@@ -563,7 +563,7 @@ def main() -> None:
             '"Calibrated digital twin of a chip-scale CPT-Rb87 atomic clock with '
             "open benchmark protocol and classical PI/LQR baselines — bench data "
             "from Mesa would let me close the reality gap on day one.\"\n\n"
-            "## Inspect data/gate_M3.json for the per-source rows."
+            "## Inspect data/audit_calibration_kitching.json for the per-source rows."
         )
         (data_dir / "M3_FAILURE_PIVOT.md").write_text(pivot_md, encoding="utf-8")
         log("Wrote M3_FAILURE_PIVOT.md (HARD KILL surfaced)")
