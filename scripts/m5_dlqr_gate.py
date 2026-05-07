@@ -2,7 +2,7 @@
 
 This script runs the M5 audit gate per the plan:
 
-  Gate: RH-LQR <= PI sigma_y at tau=100s on `thermal_ramp`.
+  Gate: DLQR <= PI sigma_y at tau=100s on `thermal_ramp`.
 
 Architecture
 ------------
@@ -12,7 +12,7 @@ noise parameters:
   disc_noise_amp_ci = 7e-4   (calibrated discriminator-input noise, Knappe 2004)
   noise_injection_point = "rf_actual_pre_step+disc_noise_pre_controller"
   duration_s = 100 s
-  seed = 42 for PI, 42 for RH-LQR (same RNG stream — same noise realisation)
+  seed = 42 for PI, 42 for DLQR (same RNG stream — same noise realisation)
 
 The only difference between the two runs is the controller object.  Using the
 same seed ensures the comparison is apples-to-apples: any sigma_y difference is
@@ -51,7 +51,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 from run_m3_m4_gates import make_calibrated_twin, run_fast_loop  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.twin.allan import overlapping_allan  # noqa: E402
 from cptservo.twin.disturbance import Disturbance  # noqa: E402
 
@@ -83,8 +83,8 @@ SCENARIO: str = "thermal_ramp"
 
 
 def run_head_to_head() -> dict:
-    """Run PI and RH-LQR on thermal_ramp; return comparison metrics."""
-    log("=== M5 gate: RH-LQR vs PI on thermal_ramp ===")
+    """Run PI and DLQR on thermal_ramp; return comparison metrics."""
+    log("=== M5 gate: DLQR vs PI on thermal_ramp ===")
     log(f"  scenario={SCENARIO}, duration={DURATION_S}s, tau_gate={TAU_S}s")
     log(f"  disc_noise_amp_ci={DISC_NOISE_AMP_CI:.0e}, seed={RNG_SEED}")
 
@@ -117,14 +117,14 @@ def run_head_to_head() -> dict:
     log(f"  PI run wall={t_pi_wall:.1f}s")
 
     # -----------------------------------------------------------------
-    # RH-LQR run
+    # DLQR run
     # -----------------------------------------------------------------
-    lqr = RHLQRController.from_recipe()
+    lqr = DLQRController.from_recipe()
     log(
-        f"  RH-LQR: Q={lqr.Q}, R={lqr.R:.1f}, "
+        f"  DLQR: Q={lqr.Q}, R={lqr.R:.1f}, "
         f"plant_gain={lqr.plant_gain:.2e}, plant_tau={lqr.plant_tau_s:.3f}s"
     )
-    log(f"  RH-LQR: K={lqr.K.tolist()}")
+    log(f"  DLQR: K={lqr.K.tolist()}")
     twin_lqr = make_calibrated_twin()
 
     t_lqr_start = time.perf_counter()
@@ -138,7 +138,7 @@ def run_head_to_head() -> dict:
         rng_seed=RNG_SEED,
     )
     t_lqr_wall = time.perf_counter() - t_lqr_start
-    log(f"  RH-LQR run wall={t_lqr_wall:.1f}s")
+    log(f"  DLQR run wall={t_lqr_wall:.1f}s")
 
     # -----------------------------------------------------------------
     # Allan deviation at tau_gate
@@ -152,18 +152,18 @@ def run_head_to_head() -> dict:
     pi_sigma = float(pi_allan[TAU_S])
     lqr_sigma = float(lqr_allan[TAU_S])
 
-    rh_lqr_wins = bool(lqr_sigma <= pi_sigma)
+    dlqr_wins = bool(lqr_sigma <= pi_sigma)
     ratio_lqr_to_pi = lqr_sigma / pi_sigma if pi_sigma > 0.0 else float("nan")
 
     log(
-        f"  sigma_y({TAU_S:.0f}s): PI={pi_sigma:.3e}, RH-LQR={lqr_sigma:.3e}, "
-        f"ratio(LQR/PI)={ratio_lqr_to_pi:.3f}, rh_lqr_wins={rh_lqr_wins}"
+        f"  sigma_y({TAU_S:.0f}s): PI={pi_sigma:.3e}, DLQR={lqr_sigma:.3e}, "
+        f"ratio(LQR/PI)={ratio_lqr_to_pi:.3f}, dlqr_wins={dlqr_wins}"
     )
 
     return {
         "pi_sigma": pi_sigma,
         "lqr_sigma": lqr_sigma,
-        "rh_lqr_wins": rh_lqr_wins,
+        "dlqr_wins": dlqr_wins,
         "ratio_lqr_to_pi": ratio_lqr_to_pi,
         "pi_wall_s": t_pi_wall,
         "lqr_wall_s": t_lqr_wall,
@@ -232,7 +232,7 @@ def main() -> None:
 
     # 1. Head-to-head simulation
     hth = run_head_to_head()
-    lqr: RHLQRController = hth["lqr_obj"]
+    lqr: DLQRController = hth["lqr_obj"]
 
     # 2. Tests
     tests_pass, n_passed, n_total = run_tests()
@@ -241,10 +241,10 @@ def main() -> None:
     ruff_clean = run_ruff()
 
     # 4. Gate verdict
-    gate_pass = bool(hth["rh_lqr_wins"] and tests_pass and ruff_clean)
+    gate_pass = bool(hth["dlqr_wins"] and tests_pass and ruff_clean)
 
     log("=== M5 gate verdict ===")
-    log(f"  rh_lqr_wins      = {hth['rh_lqr_wins']}")
+    log(f"  dlqr_wins      = {hth['dlqr_wins']}")
     log(f"  tests_passed     = {tests_pass} ({n_passed}/{n_total})")
     log(f"  ruff_clean       = {ruff_clean}")
     log(f"  gate_pass        = {gate_pass}")
@@ -287,9 +287,9 @@ def main() -> None:
         "scenario": SCENARIO,
         "tau_gate_s": TAU_S,
         "pi_sigma_y_100s_thermal_ramp": hth["pi_sigma"],
-        "rh_lqr_sigma_y_100s_thermal_ramp": hth["lqr_sigma"],
+        "dlqr_sigma_y_100s_thermal_ramp": hth["lqr_sigma"],
         "ratio_lqr_to_pi": hth["ratio_lqr_to_pi"],
-        "rh_lqr_wins": hth["rh_lqr_wins"],
+        "dlqr_wins": hth["dlqr_wins"],
         "noise_injection_point": "rf_actual_pre_step+disc_noise_pre_controller",
         "disc_noise_amp_ci": DISC_NOISE_AMP_CI,
         "rng_seed": RNG_SEED,
@@ -309,7 +309,7 @@ def main() -> None:
     verdict = "GATE PASS" if gate_pass else "GATE FAIL"
     log(f"\n{'='*50}")
     log(f"  M5 {verdict}")
-    log(f"  sigma_y({TAU_S:.0f}s) PI={hth['pi_sigma']:.3e}  RH-LQR={hth['lqr_sigma']:.3e}")
+    log(f"  sigma_y({TAU_S:.0f}s) PI={hth['pi_sigma']:.3e}  DLQR={hth['lqr_sigma']:.3e}")
     log(f"{'='*50}")
 
 

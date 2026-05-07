@@ -24,7 +24,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 
 from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
 
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.policy.ml_research import (  # noqa: E402
     CfCDirectConfig,
@@ -162,7 +162,7 @@ def make_perturbed_twin(frac: float, rng_seed: int) -> ReducedTwin:
 
 def apply_structured_readout(controller: CfCDirectController, spec: StructuredSpec) -> None:
     """Install physical coefficients into the direct-CfC feature skip readout."""
-    lqr_gain = RHLQRController.from_recipe().K
+    lqr_gain = DLQRController.from_recipe().K
     kp = float(lqr_gain[0, 0]) * spec.kp_scale
     ki = float(lqr_gain[0, 1]) * spec.ki_scale
     for value in controller.weights.values():
@@ -219,8 +219,8 @@ def evaluate_specs(
     disc_noise_amp_ci: float = DISC_NOISE_AMP_CI,
     twin: ReducedTwin | None = None,
 ) -> dict[str, Any]:
-    """Evaluate RH-LQR and candidate specs as one paired batch."""
-    controllers: list[Any] = [RHLQRController.from_recipe()]
+    """Evaluate DLQR and candidate specs as one paired batch."""
+    controllers: list[Any] = [DLQRController.from_recipe()]
     controllers.extend(make_direct_controller(spec) for spec in specs)
     controller = BatchDispatchController(controllers)
     res = run_batched_loop(
@@ -235,7 +235,7 @@ def evaluate_specs(
         shared_noise_across_batch=True,
         autograd=False,
     )
-    rh = metrics_from_y_rf(res["y"][0], res["rf_cmd"][0], "rh_lqr")
+    rh = metrics_from_y_rf(res["y"][0], res["rf_cmd"][0], "dlqr")
     candidates: dict[str, Any] = {}
     for idx, spec in enumerate(specs, start=1):
         ml = metrics_from_y_rf(res["y"][idx], res["rf_cmd"][idx], spec.name)
@@ -256,7 +256,7 @@ def evaluate_specs(
             "ml_over_rhlqr_1s": tau1_ratio,
         }
     return {
-        "rh_lqr": rh,
+        "dlqr": rh,
         "candidates": candidates,
         "wall_s": float(res["wall_s"]),
     }
@@ -506,7 +506,7 @@ def run_structured_screen(args: argparse.Namespace, run_dir: Path) -> dict[str, 
                 disc_noise_amp_ci=probe["disc_noise_amp_ci"],
                 twin=probe["twin"],
             )
-            combined[key]["rh_lqr"] = result["rh_lqr"]
+            combined[key]["dlqr"] = result["dlqr"]
             combined[key]["wall_s"] = combined[key].get("wall_s", 0.0) + result["wall_s"]
             combined[key]["candidates"].update(result["candidates"])
 

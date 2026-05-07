@@ -23,7 +23,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 
 from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
 
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.policy.ml_research import (  # noqa: E402
     CfCFeedforwardConfig,
@@ -209,7 +209,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         metrics["fit_metrics"] = fit_metrics
     if args.eval_duration_s > 0.0:
         metrics["eval_duration_s"] = args.eval_duration_s
-        metrics["rh_lqr"] = evaluate(RHLQRController.from_recipe(), args.eval_duration_s)
+        metrics["dlqr"] = evaluate(DLQRController.from_recipe(), args.eval_duration_s)
         metrics["cfc"] = evaluate(CfCFeedforwardController.load(ckpt_path), args.eval_duration_s)
     (run_dir / "metrics.json").write_text(
         json.dumps(_json_safe(metrics), indent=2),

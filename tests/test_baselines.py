@@ -9,12 +9,12 @@ Five unit tests + one integration test (PI):
 6. test_closed_loop_pi_locks               -- 30s closed loop on b_field_drift lowers sigma_y
                                               by >10x vs open-loop on the same scenario.
 
-Five RH-LQR tests:
+Five DLQR tests:
 7.  test_rhlqr_zero_error_zero_control  -- zero error produces zero output.
 8.  test_rhlqr_lqr_gain_computed        -- K is non-zero and has shape (1, 2).
 9.  test_rhlqr_anti_windup_clamps       -- integrator bounded under saturation.
 10. test_rhlqr_locks_in_closed_loop     -- 5s closed loop sigma_y within 2x of PI.
-11. test_rhlqr_from_recipe              -- from_recipe() returns RHLQRController.
+11. test_rhlqr_from_recipe              -- from_recipe() returns DLQRController.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ import pytest
 import torch
 
 from cptservo.baselines.pi import PIController
-from cptservo.baselines.rh_lqr import RHLQRController
+from cptservo.baselines.dlqr import DLQRController
 from cptservo.evaluation.closed_loop import run_closed_loop, run_open_loop
 from cptservo.twin.allan import overlapping_allan
 from cptservo.twin.disturbance import Disturbance
@@ -231,13 +231,13 @@ def test_closed_loop_pi_locks() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 7: RH-LQR zero error -> zero control
+# Test 7: DLQR zero error -> zero control
 # ---------------------------------------------------------------------------
 
 
 def test_rhlqr_zero_error_zero_control() -> None:
-    """RHLQRController outputs (0, 0) for a stream of zero errors."""
-    ctrl = RHLQRController()
+    """DLQRController outputs (0, 0) for a stream of zero errors."""
+    ctrl = DLQRController()
     for _ in range(20):
         laser, rf = ctrl.step(0.0)
     assert laser == pytest.approx(0.0), f"laser correction should be 0, got {laser}"
@@ -251,7 +251,7 @@ def test_rhlqr_zero_error_zero_control() -> None:
 
 def test_rhlqr_lqr_gain_computed() -> None:
     """K is computed by DARE, has shape (1, 2), and all entries are non-zero."""
-    ctrl = RHLQRController()
+    ctrl = DLQRController()
     K = ctrl.K
     assert K.shape == (1, 2), f"K should have shape (1, 2), got {K.shape}"
     assert abs(K[0, 0]) > 0.0, f"K[0,0] should be non-zero, got {K[0,0]}"
@@ -274,7 +274,7 @@ def test_rhlqr_anti_windup_clamps() -> None:
     state should not grow without bound.
     """
     rf_limit = 100.0
-    ctrl = RHLQRController(rf_limit_Hz=rf_limit)
+    ctrl = DLQRController(rf_limit_Hz=rf_limit)
     ctrl.reset()
 
     for _ in range(2000):
@@ -298,15 +298,15 @@ def test_rhlqr_anti_windup_clamps() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 10: Closed-loop RH-LQR locks within 2x of PI sigma_y(1s) on clean
+# Test 10: Closed-loop DLQR locks within 2x of PI sigma_y(1s) on clean
 # ---------------------------------------------------------------------------
 
 
 def test_rhlqr_locks_in_closed_loop() -> None:
-    """5s closed loop with RH-LQR on clean scenario; sigma_y within 2x of PI.
+    """5s closed loop with DLQR on clean scenario; sigma_y within 2x of PI.
 
     Uses b_field_drift (same as the PI integration test) for a 5-second run.
-    The RH-LQR must achieve sigma_y(tau=1s) within 2x of what PI achieves on
+    The DLQR must achieve sigma_y(tau=1s) within 2x of what PI achieves on
     the same scenario, proving it is a valid servo alternative.
     """
     DURATION_S = 5.0
@@ -330,9 +330,9 @@ def test_rhlqr_locks_in_closed_loop() -> None:
         n_warmup_steps=5_000,
     )
 
-    # RH-LQR run
+    # DLQR run
     twin_lqr = _make_twin()
-    lqr = RHLQRController(control_dt_s=1.0 / DEC_HZ)
+    lqr = DLQRController(control_dt_s=1.0 / DEC_HZ)
     lqr_result = run_closed_loop(
         twin=twin_lqr,
         controller=lqr,
@@ -354,7 +354,7 @@ def test_rhlqr_locks_in_closed_loop() -> None:
     pi_sigma = pi_allan.get(1.0, float("inf"))
     lqr_sigma = lqr_allan.get(1.0, float("inf"))
 
-    assert lqr_sigma > 0, "RH-LQR sigma_y should be nonzero"
+    assert lqr_sigma > 0, "DLQR sigma_y should be nonzero"
     assert pi_sigma > 0, "PI sigma_y should be nonzero"
 
     # Both controllers should produce sigma_y in a physically reasonable range
@@ -364,19 +364,19 @@ def test_rhlqr_locks_in_closed_loop() -> None:
     # (which DO inject disc noise per Knappe 2004) live in run_m5_gate.py and
     # the M3 audit. This test is a sanity check that LQR closes the loop.
     assert lqr_sigma < 1.0e-9, (
-        f"RH-LQR sigma_y(1s) should be physically bounded; got {lqr_sigma:.3e}"
+        f"DLQR sigma_y(1s) should be physically bounded; got {lqr_sigma:.3e}"
     )
 
 
 # ---------------------------------------------------------------------------
-# Test 11: from_recipe constructs an RHLQRController
+# Test 11: from_recipe constructs an DLQRController
 # ---------------------------------------------------------------------------
 
 
 def test_rhlqr_from_recipe() -> None:
-    """RHLQRController.from_recipe() returns an RHLQRController with valid K."""
-    ctrl = RHLQRController.from_recipe()
-    assert isinstance(ctrl, RHLQRController)
+    """DLQRController.from_recipe() returns an DLQRController with valid K."""
+    ctrl = DLQRController.from_recipe()
+    assert isinstance(ctrl, DLQRController)
     assert ctrl.K.shape == (1, 2), f"K should have shape (1,2), got {ctrl.K.shape}"
     assert ctrl.K[0, 0] > 0.0, f"K[0,0] should be positive, got {ctrl.K[0,0]}"
     assert ctrl.K[0, 1] > 0.0, f"K[0,1] should be positive, got {ctrl.K[0,1]}"

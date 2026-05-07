@@ -1,7 +1,7 @@
-"""ML residual vs RH-LQR robustness gate.
+"""ML residual vs DLQR robustness gate.
 
 This is the M8-style follow-up for the narrow M5 ML residual win.  It compares
-the promoted ``PhysicsResidualController`` directly against RH-LQR on a compact
+the promoted ``PhysicsResidualController`` directly against DLQR on a compact
 set of perturbation probes and writes ``data/gate_ML_M8.json``.
 """
 
@@ -23,7 +23,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 
 from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
 
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.policy.ml_research import (  # noqa: E402
     CfCDirectController,
@@ -135,9 +135,9 @@ def evaluate_pair(
     rng_seed: int,
     twin: ReducedTwin | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Run RH-LQR and ML as a paired two-element batch."""
+    """Run DLQR and ML as a paired two-element batch."""
     controller = _BatchDispatchController(
-        [RHLQRController.from_recipe(), ml_controller]
+        [DLQRController.from_recipe(), ml_controller]
     )
     res = run_batched_loop(
         twin=twin or make_calibrated_twin(),
@@ -164,7 +164,7 @@ def evaluate_pair(
             "wall_s": float(res["wall_s"]),
         }
 
-    return metrics("rh_lqr", 0), metrics("ml_controller", 1)
+    return metrics("dlqr", 0), metrics("ml_controller", 1)
 
 
 def run_probe(
@@ -177,7 +177,7 @@ def run_probe(
     tie_tolerance: float = 0.0,
     twin: ReducedTwin | None = None,
 ) -> dict[str, Any]:
-    """Compare RH-LQR and ML residual on one probe."""
+    """Compare DLQR and ML residual on one probe."""
     log(f"probe={name}")
     lqr_metrics, ml_metrics = evaluate_pair(
         controller_factory(),
@@ -192,7 +192,7 @@ def run_probe(
     ratio = ml_10 / lqr_10 if np.isfinite(ml_10) and lqr_10 > 0.0 else float("nan")
     return {
         "probe": name,
-        "rh_lqr": lqr_metrics,
+        "dlqr": lqr_metrics,
         "ml": ml_metrics,
         "ml_over_rhlqr_10s": ratio,
         "ml_ties_or_wins_10s": bool(np.isfinite(ratio) and ratio <= 1.0 + tie_tolerance),

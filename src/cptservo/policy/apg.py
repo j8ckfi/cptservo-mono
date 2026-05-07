@@ -16,7 +16,7 @@ Action: scalar rf_correction (Hz), clamped to +/-rf_limit_Hz.
 
 Protocol compatibility:
     step(error, env) -> (laser_corr_Hz, rf_corr_Hz) matches the
-    PIController / RHLQRController protocol so the policy can be dropped into
+    PIController / DLQRController protocol so the policy can be dropped into
     run_fast_loop without modification.
 
 References
@@ -126,7 +126,7 @@ class APGPolicy(nn.Module):
         return rf.to(dtype=out_dtype)
 
     # ---------------------------------------------------------------------------
-    # Single-step protocol -- drop-in for PIController / RHLQRController
+    # Single-step protocol -- drop-in for PIController / DLQRController
     # ---------------------------------------------------------------------------
 
     def step(

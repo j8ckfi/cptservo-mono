@@ -17,7 +17,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from cptservo.baselines.rh_lqr import RHLQRController
+from cptservo.baselines.dlqr import DLQRController
 
 
 @dataclass(frozen=True)
@@ -61,7 +61,7 @@ class MLServoController(nn.Module):
         self.net = nn.Sequential(*layers).float()
         self.register_buffer("obs_mean", torch.zeros(self.obs_dim, dtype=torch.float32))
         self.register_buffer("obs_std", torch.ones(self.obs_dim, dtype=torch.float32))
-        self._lqr = RHLQRController(rf_limit_Hz=self.config.rf_limit_Hz)
+        self._lqr = DLQRController(rf_limit_Hz=self.config.rf_limit_Hz)
         self.reset()
 
     def reset(self) -> None:
@@ -163,11 +163,11 @@ def fit_obs_stats(model: MLServoController, obs: np.ndarray) -> None:
 
 
 def read_rhlqr_reference(project_root: Path) -> float:
-    """Read the current M5 RH-LQR tau=10s reference."""
+    """Read the current M5 DLQR tau=10s reference."""
     path = project_root / "data" / "gate_M5.json"
     data = json.loads(path.read_text(encoding="utf-8-sig"))
     for key in (
-        "rh_lqr_sigma_y_10s",
+        "dlqr_sigma_y_10s",
         "rhlqr_sigma_y_10s",
         "rhlqr_sigma_y_10s_thermal",
         "lqr_sigma_y_10s",
@@ -176,15 +176,15 @@ def read_rhlqr_reference(project_root: Path) -> float:
         if key in data:
             return float(data[key])
     hth = data.get("head_to_head_thermal_ramp", {})
-    for key in ("rh_lqr_sigma_y_10s", "lqr_sigma_y_10s", "dlqr_sigma_y_10s"):
+    for key in ("dlqr_sigma_y_10s", "lqr_sigma_y_10s", "dlqr_sigma_y_10s"):
         if key in hth:
             return float(hth[key])
-    raise KeyError(f"Could not find RH-LQR tau=10s reference in {path}")
+    raise KeyError(f"Could not find DLQR tau=10s reference in {path}")
 
 
 @dataclass(frozen=True)
 class PhysicsResidualConfig:
-    """Linear learned residual over RH-LQR using physical sensor bases."""
+    """Linear learned residual over DLQR using physical sensor bases."""
 
     k_T_Hz_per_K: float = 0.0
     k_B_Hz_per_uT: float = 0.0
@@ -205,7 +205,7 @@ class PhysicsResidualConfig:
 
 
 class PhysicsResidualController:
-    """Linear residual ML controller on top of RH-LQR.
+    """Linear residual ML controller on top of DLQR.
 
     The fitted model is:
 
@@ -218,7 +218,7 @@ class PhysicsResidualController:
 
     def __init__(self, config: PhysicsResidualConfig | None = None) -> None:
         self.config = config or PhysicsResidualConfig()
-        self._lqr = RHLQRController(
+        self._lqr = DLQRController(
             control_dt_s=self.config.control_dt_s,
             rf_limit_Hz=self.config.rf_limit_Hz,
         )
@@ -315,7 +315,7 @@ class PhysicsResidualController:
 
 @dataclass(frozen=True)
 class CfCFeedforwardConfig:
-    """Tiny closed-form continuous-time feedforward over RH-LQR."""
+    """Tiny closed-form continuous-time feedforward over DLQR."""
 
     hidden_size: int = 8
     seed: int = 1729
@@ -324,7 +324,7 @@ class CfCFeedforwardConfig:
 
 
 class CfCFeedforwardController:
-    """Closed-form gated recurrent residual over RH-LQR.
+    """Closed-form gated recurrent residual over DLQR.
 
     This is intentionally small and dependency-free.  The base residual starts
     from the known M5-passing physics term, while the CfC cell can learn a slow
@@ -340,7 +340,7 @@ class CfCFeedforwardController:
     ) -> None:
         self.config = config or CfCFeedforwardConfig()
         self._base = PhysicsResidualController(self.config.base_residual)
-        self._lqr = RHLQRController(
+        self._lqr = DLQRController(
             control_dt_s=self.config.base_residual.control_dt_s,
             rf_limit_Hz=self.config.base_residual.rf_limit_Hz,
         )
@@ -498,8 +498,8 @@ class CfCFeedforwardController:
 class CfCDirectConfig:
     """Tiny closed-form continuous-time direct-action controller.
 
-    Unlike ``CfCFeedforwardController``, this controller does not call RH-LQR at
-    runtime and does not add a residual to an RH-LQR action.  The recurrent cell
+    Unlike ``CfCFeedforwardController``, this controller does not call DLQR at
+    runtime and does not add a residual to an DLQR action.  The recurrent cell
     emits the full RF correction from discriminator error, sensor features, and
     its own internal state.
     """

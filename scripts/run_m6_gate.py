@@ -1,4 +1,4 @@
-"""M6 gate: train APG policy, then compare PI vs RH-LQR vs APG on all_stacked.
+"""M6 gate: train APG policy, then compare PI vs DLQR vs APG on all_stacked.
 
 Gate criterion (from spec):
     APG sigma_y(tau=100s) on all_stacked <= 0.8 * min(PI sigma_y, LQR sigma_y)
@@ -6,7 +6,7 @@ Gate criterion (from spec):
 
 Steps:
     1. Train APG policy via train_apg() with default curriculum.
-    2. Run 100 s of all_stacked through PI, RH-LQR, and APG.
+    2. Run 100 s of all_stacked through PI, DLQR, and APG.
     3. Compute sigma_y at tau in {1, 10, 100} s for each.
     4. Evaluate gate criterion and write data/gate_M6.json.
 
@@ -47,7 +47,7 @@ sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 from run_m3_m4_gates import log, make_calibrated_twin, run_fast_loop  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.policy.apg import APGPolicy  # noqa: E402
 from cptservo.policy.apg_train import train_apg  # noqa: E402
 from cptservo.twin.allan import overlapping_allan  # noqa: E402
@@ -141,7 +141,7 @@ def train_policy(models_dir: Path) -> tuple[APGPolicy, dict[str, Any]]:
 
 
 def run_evaluation(policy: APGPolicy) -> dict[str, Any]:
-    """Run PI, RH-LQR, and APG on all_stacked and compute sigma_y.
+    """Run PI, DLQR, and APG on all_stacked and compute sigma_y.
 
     Args:
         policy: Trained APGPolicy in eval mode.
@@ -180,9 +180,9 @@ def run_evaluation(policy: APGPolicy) -> dict[str, Any]:
     log(f"  PI run wall={pi_wall:.1f}s")
 
     # -----------------------------------------------------------------
-    # RH-LQR run
+    # DLQR run
     # -----------------------------------------------------------------
-    lqr = RHLQRController.from_recipe()
+    lqr = DLQRController.from_recipe()
     log(f"  LQR: K={lqr.K[0].tolist()}, Q={lqr.Q}, R={lqr.R}")
     twin_lqr = make_calibrated_twin()
     t0 = time.perf_counter()
@@ -386,7 +386,7 @@ def main() -> None:
     log(f"  Saved training metrics: {train_metrics_path}")
 
     # 2. Evaluate all three controllers
-    log("\n--- Step 2: Evaluate PI, RH-LQR, APG on all_stacked ---")
+    log("\n--- Step 2: Evaluate PI, DLQR, APG on all_stacked ---")
     eval_results = run_evaluation(policy)
 
     # 3. Run tests

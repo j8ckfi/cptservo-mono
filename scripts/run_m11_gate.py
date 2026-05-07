@@ -1,6 +1,6 @@
 """M11 direct-CfC promotion gate.
 
-This gate compares RH-LQR, the current promoted direct-CfC checkpoint, and one
+This gate compares DLQR, the current promoted direct-CfC checkpoint, and one
 or more candidate direct-CfC checkpoints through the canonical batched runner
 with shared noise.  It never overwrites historical ML-M8 artifacts.
 """
@@ -23,7 +23,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 
 from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
 
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.policy.ml_research import CfCDirectController  # noqa: E402
 from cptservo.twin.allan import overlapping_allan  # noqa: E402
@@ -288,7 +288,7 @@ def evaluate_probe(
     sensor_lag_alpha: float,
 ) -> dict[str, Any]:
     """Evaluate all controllers for one probe as a paired shared-noise batch."""
-    controllers: list[Any] = [RHLQRController.from_recipe()]
+    controllers: list[Any] = [DLQRController.from_recipe()]
     controllers.extend(
         controller_from_checkpoint(path, sensor_bias, sensor_lag_alpha)
         for path in checkpoints
@@ -305,7 +305,7 @@ def evaluate_probe(
         shared_noise_across_batch=True,
         autograd=False,
     )
-    rh = metrics_from_y_rf(res["y"][0], res["rf_cmd"][0], "rh_lqr")
+    rh = metrics_from_y_rf(res["y"][0], res["rf_cmd"][0], "dlqr")
     controller_results: dict[str, Any] = {}
     for idx, label in enumerate(labels, start=1):
         metrics = metrics_from_y_rf(res["y"][idx], res["rf_cmd"][idx], label)
@@ -322,7 +322,7 @@ def evaluate_probe(
             ),
         }
     return {
-        "rh_lqr": rh,
+        "dlqr": rh,
         "controllers": controller_results,
         "disc_noise_amp_ci": probe["disc_noise_amp_ci"],
         "rng_seed": probe["rng_seed"],

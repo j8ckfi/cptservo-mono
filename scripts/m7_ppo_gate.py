@@ -5,8 +5,8 @@ Computes σ_y at τ ∈ {1, 10, 100} s.  Writes data/gate_M7.json.
 
 Gate pass criterion (M7 spec):
     PPO σ_y ≤ PI σ_y on thermal_ramp at τ=10 s.
-    (This matches the RH-LQR M5 gate threshold — the primary RL headline.)
-    Bonus: PPO matches RH-LQR within 50 % on thermal_ramp at τ=10 s.
+    (This matches the DLQR M5 gate threshold — the primary RL headline.)
+    Bonus: PPO matches DLQR within 50 % on thermal_ramp at τ=10 s.
 
 Anti-fudge discipline
 ---------------------
@@ -59,8 +59,8 @@ EVAL_TAUS: list[float] = [1.0, 10.0, 100.0]
 RNG_SEED: int = 42
 RF_LIMIT_HZ: float = 1_000.0
 
-# M5 RH-LQR sigma_y at tau=10s on thermal_ramp, loaded from data/gate_M5.json.
-_RHLQR_SIGMA_Y_10S_THERMAL: float = read_rhlqr_reference(_PROJECT_ROOT)
+# M5 DLQR sigma_y at tau=10s on thermal_ramp, loaded from data/gate_M5.json.
+_DLQR_SIGMA_Y_10S_THERMAL: float = read_rhlqr_reference(_PROJECT_ROOT)
 
 
 _LOG_PATH = _PROJECT_ROOT / "logs" / "m7_gate.log"
@@ -420,9 +420,9 @@ def run_head_to_head() -> dict[str, Any]:
         np.isfinite(ppo_tr_10) and np.isfinite(pi_tr_10) and ppo_tr_10 <= pi_tr_10
     )
 
-    # Bonus: PPO matches RH-LQR within 50% on thermal_ramp tau=10s
-    if np.isfinite(ppo_tr_10) and _RHLQR_SIGMA_Y_10S_THERMAL > 0.0:
-        ppo_vs_lqr_ratio = ppo_tr_10 / _RHLQR_SIGMA_Y_10S_THERMAL
+    # Bonus: PPO matches DLQR within 50% on thermal_ramp tau=10s
+    if np.isfinite(ppo_tr_10) and _DLQR_SIGMA_Y_10S_THERMAL > 0.0:
+        ppo_vs_lqr_ratio = ppo_tr_10 / _DLQR_SIGMA_Y_10S_THERMAL
         ppo_matches_lqr = bool(ppo_vs_lqr_ratio <= 1.5)
     else:
         ppo_vs_lqr_ratio = float("nan")
@@ -433,7 +433,7 @@ def run_head_to_head() -> dict[str, Any]:
         f"speedup={speedup_tr_10:.3f}  ppo_wins={ppo_wins_tr_10}"
     )
     log(
-        f"  vs RH-LQR ({_RHLQR_SIGMA_Y_10S_THERMAL:.3e}):  "
+        f"  vs DLQR ({_DLQR_SIGMA_Y_10S_THERMAL:.3e}):  "
         f"ratio={ppo_vs_lqr_ratio:.3f}  matches_lqr_within_50pct={ppo_matches_lqr}"
     )
 
@@ -598,7 +598,7 @@ def main() -> None:
             "ppo_sigma_y_100s": hth["ppo_tr_100s"],
             "ppo_speedup_at_10s": hth["speedup_tr_10s"],
             "ppo_wins_at_10s": hth["ppo_wins_tr_10s"],
-            "rhlqr_sigma_y_10s_for_reference": _RHLQR_SIGMA_Y_10S_THERMAL,
+            "rhlqr_sigma_y_10s_for_reference": _DLQR_SIGMA_Y_10S_THERMAL,
             "ppo_vs_lqr_ratio_at_10s": hth["ppo_vs_lqr_ratio_tr_10s"],
             "ppo_matches_lqr_within_50pct": hth["ppo_matches_lqr_within_50pct"],
         },

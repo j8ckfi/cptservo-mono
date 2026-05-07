@@ -47,7 +47,7 @@ import torch
 import yaml
 from gymnasium import spaces
 
-from cptservo.baselines.rh_lqr import RHLQRController
+from cptservo.baselines.dlqr import DLQRController
 from cptservo.twin.disturbance import Disturbance
 from cptservo.twin.reduced import ReducedTwin
 
@@ -199,7 +199,7 @@ class CPTServoEnv(gymnasium.Env):
         self._reward_window: deque[float] = deque(
             maxlen=max(2, int(round(reward_window_s * decimation_rate_Hz)))
         )
-        self._lqr_hint = RHLQRController(
+        self._lqr_hint = DLQRController(
             control_dt_s=1.0 / decimation_rate_Hz,
             rf_limit_Hz=rf_limit_Hz,
         )

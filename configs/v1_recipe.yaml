@@ -98,7 +98,7 @@ disturbance_recipes:
     laser_intensity_white_noise: 0.001
 
 # Actuator bounds for both classical and learned controllers.
-# Outside these bounds the controllers must saturate (PI/RH-LQR) or
+# Outside these bounds the controllers must saturate (PI/DLQR) or
 # be penalized (APG/PPO).
 actuator_bounds:
   laser_detuning_max_Hz: 1.0e6     # +/-1 MHz max correction

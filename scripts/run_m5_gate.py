@@ -1,7 +1,7 @@
-"""Run the M5 RH-LQR/DLQR-vs-PI benchmark.
+"""Run the M5 DLQR/DLQR-vs-PI benchmark.
 
 This script uses the same ``run_batched_loop`` evaluation harness as the M8
-adversarial battery. The historical controller name is RH-LQR, but the
+adversarial battery. The historical controller name is DLQR, but the
 implementation is a steady-state two-state DLQR gain.
 """
 
@@ -22,7 +22,7 @@ sys.path.insert(0, str(_PROJECT_ROOT / "scripts"))
 from run_m3_m4_gates import log, make_calibrated_twin  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.twin.allan import overlapping_allan  # noqa: E402
 from cptservo.twin.disturbance import Disturbance  # noqa: E402
@@ -65,15 +65,15 @@ def _run_controller(controller: Any) -> dict[str, Any]:
 
 
 def run_m5_gate() -> dict[str, Any]:
-    """Run PI and RH-LQR/DLQR on the same thermal-ramp trace."""
-    log("M5: RH-LQR/DLQR baseline gate")
+    """Run PI and DLQR/DLQR on the same thermal-ramp trace."""
+    log("M5: DLQR/DLQR baseline gate")
     log(
         f"  scenario={SCENARIO}, duration={DURATION_S}s, "
         f"disc_noise_amp_ci={DISC_NOISE_AMP_CI:.1e}, seed={RNG_SEED}"
     )
 
     pi = PIController.from_recipe()
-    lqr = RHLQRController.from_recipe()
+    lqr = DLQRController.from_recipe()
     log(f"  PI gains: kp={pi.kp}, ki={pi.ki}, dt={pi.control_dt_s}")
     log(f"  LQR gains: K={lqr.K}, Q={lqr.Q}, R={lqr.R}, dt={lqr.control_dt_s}")
 
@@ -84,7 +84,7 @@ def run_m5_gate() -> dict[str, Any]:
         f"wall={pi_metrics['wall_s']:.1f}s"
     )
 
-    log("  RH-LQR/DLQR closed-loop ...")
+    log("  DLQR/DLQR closed-loop ...")
     lqr_metrics = _run_controller(lqr)
     log(
         f"    sigma_y(10s)={lqr_metrics['sigma_y_10s']:.3e}, "
@@ -99,9 +99,9 @@ def run_m5_gate() -> dict[str, Any]:
 
     gate: dict[str, Any] = {
         "milestone": "M5",
-        "controller_label": "RH-LQR/DLQR",
+        "controller_label": "DLQR/DLQR",
         "controller_note": (
-            "Historical RH-LQR name retained; implementation is steady-state "
+            "Historical DLQR name retained; implementation is steady-state "
             "two-state DLQR, not iterative online MPC."
         ),
         "Q_diag": list(lqr.Q),

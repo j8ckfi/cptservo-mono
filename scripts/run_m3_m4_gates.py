@@ -558,7 +558,7 @@ def main() -> None:
             f"Primary ratios out of [0.5, 2.0]: max={m3['primary_max_ratio']:.3f}, "
             f"min={m3['primary_min_ratio']:.3f}.\n\n"
             "## Recommended pivot\n\n"
-            "Per the plan's M3 kill action, ship the calibrated twin + PI/RH-LQR "
+            "Per the plan's M3 kill action, ship the calibrated twin + PI/DLQR "
             "baselines only — the learned-servo headline is removed. Reframed pitch:\n"
             '"Calibrated digital twin of a chip-scale CPT-Rb87 atomic clock with '
             "open benchmark protocol and classical PI/LQR baselines — bench data "

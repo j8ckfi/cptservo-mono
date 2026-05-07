@@ -1,11 +1,11 @@
-"""M8 adversarial battery: stress-test the M5 RH-LQR benchmark.
+"""M8 adversarial battery: stress-test the M5 DLQR benchmark.
 
-M5 reports **RH-LQR beats PI by 11.55x on thermal_ramp at tau=10s** in its
+M5 reports **DLQR beats PI by 11.55x on thermal_ramp at tau=10s** in its
 100-second benchmark harness. M8 asks a narrower robustness question: does the
 same frozen controller retain a positive win under perturbed conditions in this
 200-second adversarial harness?
 
-Five probes, each runs PI and RH-LQR on a perturbed scenario for 200 s and
+Five probes, each runs PI and DLQR on a perturbed scenario for 200 s and
 reports sigma_y(tau=10s):
 
     Probe A (OOD T-ramp)         — thermal_ramp with 3x nominal slope
@@ -18,7 +18,7 @@ reports sigma_y(tau=10s):
 Plus a baseline reproduce of M5 nominal thermal_ramp to confirm the harness.
 
 Gate (per plan, soft-kill / demote):
-    RH-LQR retains positive win on >= 3 of 5 probes,
+    DLQR retains positive win on >= 3 of 5 probes,
     AND retains > 5 % positive win on Probe D (reality-gap).
 
 If gate fails, the nominal LQR-win claim is demoted and the failure modes below
@@ -65,7 +65,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
 
 from cptservo.baselines.pi import PIController  # noqa: E402
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.twin.allan import overlapping_allan  # noqa: E402
 from cptservo.twin.disturbance import Disturbance, DisturbanceTrace  # noqa: E402
@@ -210,7 +210,7 @@ def make_all_stacked_trace(
 
 def run_one(
     twin: ReducedTwin,
-    controller: PIController | RHLQRController,
+    controller: PIController | DLQRController,
     trace: DisturbanceTrace,
     disc_noise_amp_ci: float = DISC_NOISE_AMP_CI,
 ) -> dict[str, Any]:
@@ -218,7 +218,7 @@ def run_one(
 
     Args:
         twin: ReducedTwin (calibrated or perturbed).
-        controller: PIController or RHLQRController.
+        controller: PIController or DLQRController.
         trace: DisturbanceTrace generated for this probe.
         disc_noise_amp_ci: Discriminator-input noise amplitude.
 
@@ -258,7 +258,7 @@ def run_probe(
     trace: DisturbanceTrace,
     disc_noise_amp_ci: float = DISC_NOISE_AMP_CI,
 ) -> dict[str, Any]:
-    """Run PI and RH-LQR on the same probe scenario, compute speedup.
+    """Run PI and DLQR on the same probe scenario, compute speedup.
 
     Args:
         name: Probe label (for logging only).
@@ -267,7 +267,7 @@ def run_probe(
         disc_noise_amp_ci: Discriminator-input noise amplitude.
 
     Returns:
-        Dict with PI and RH-LQR sigma_y at three taus + speedup at tau=10s.
+        Dict with PI and DLQR sigma_y at three taus + speedup at tau=10s.
     """
     log(f"  --- Probe: {name} ---")
 
@@ -281,8 +281,8 @@ def run_probe(
         f"sigma_y(10s)={pi_metrics['sigma_y_10s']:.3e}  wall={pi_wall:.1f}s"
     )
 
-    # RH-LQR (rebuild fresh each probe so internal Riccati is clean)
-    lqr = RHLQRController.from_recipe()
+    # DLQR (rebuild fresh each probe so internal Riccati is clean)
+    lqr = DLQRController.from_recipe()
     t0 = time.perf_counter()
     lqr_metrics = run_one(twin, lqr, trace, disc_noise_amp_ci)
     lqr_wall = time.perf_counter() - t0
@@ -523,14 +523,14 @@ def aggregate_and_write(results: dict[str, Any]) -> dict[str, Any]:
 
     lines.append("## Gate criterion\n")
     lines.append(
-        "Per plan §M8: RH-LQR retains positive win on ≥3 of 5 probes\n"
+        "Per plan §M8: DLQR retains positive win on ≥3 of 5 probes\n"
         "AND retains > 5 % positive win on the reality-gap probe.\n\n"
     )
 
     lines.append("## Honest assessment\n")
     if gate_pass:
         lines.append(
-            "All adversarial probes preserve a positive RH-LQR win. The "
+            "All adversarial probes preserve a positive DLQR win. The "
             "robust conclusion is not that the exact 11.55x M5 magnitude "
             "reappears here; it is that the frozen LQR remains ahead of PI "
             "across the tested perturbation surface.\n"

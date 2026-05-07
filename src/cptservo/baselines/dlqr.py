@@ -175,7 +175,7 @@ def _solve_lqr(
     return k
 
 
-class RHLQRController:
+class DLQRController:
     """Steady-state discrete LQR (receding-horizon framing) for the CPT RF loop.
 
     The 2-state linearised plant (ci_filtered, integral_ci) is discretised via
@@ -316,12 +316,12 @@ class RHLQRController:
     # -----------------------------------------------------------------------
 
     @classmethod
-    def from_recipe(cls, recipe_path: str | Path | None = None) -> RHLQRController:
-        """Load RH-LQR parameters from ``configs/v1_recipe.yaml`` if present.
+    def from_recipe(cls, recipe_path: str | Path | None = None) -> DLQRController:
+        """Load DLQR parameters from ``configs/v1_recipe.yaml`` if present.
 
-        The recipe YAML may contain an optional ``rh_lqr`` block::
+        The recipe YAML may contain an optional ``dlqr`` block::
 
-            rh_lqr:
+            dlqr:
               Q: [1.0e6, 1.0e8]
               R: 1.0
               control_dt_s: 0.001
@@ -333,13 +333,13 @@ class RHLQRController:
                 ``configs/v1_recipe.yaml`` relative to the package root.
 
         Returns:
-            RHLQRController with parameters from recipe or defaults.
+            DLQRController with parameters from recipe or defaults.
         """
         rp = Path(recipe_path) if recipe_path is not None else _RECIPE_PATH
         if rp.exists():
             with open(rp, encoding="utf-8-sig") as fh:
                 recipe = yaml.safe_load(fh)
-            params = recipe.get("rh_lqr", {})
+            params = recipe.get("dlqr", {})
         else:
             params = {}
 
@@ -351,7 +351,7 @@ class RHLQRController:
         )
 
     @classmethod
-    def from_calibration(cls, calibration_path: str | Path) -> RHLQRController:
+    def from_calibration(cls, calibration_path: str | Path) -> DLQRController:
         """Load parameters stored in a gate JSON (for reproducibility).
 
         Args:
@@ -359,7 +359,7 @@ class RHLQRController:
                 optionally ``control_dt_s`` keys.
 
         Returns:
-            RHLQRController initialised from the stored parameters.
+            DLQRController initialised from the stored parameters.
         """
         with open(calibration_path, encoding="utf-8-sig") as fh:
             data = json.load(fh)

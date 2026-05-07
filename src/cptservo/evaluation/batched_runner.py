@@ -74,7 +74,7 @@ def _load_total_white_fm_amp(project_root: Path) -> float:
 
 def run_batched_loop(
     twin: ReducedTwin,
-    controller: Any,  # PIController | RHLQRController | APGPolicy
+    controller: Any,  # PIController | DLQRController | APGPolicy
     disturbance_traces: list[DisturbanceTrace],
     duration_s: float,
     physics_rate_Hz: float = 10_000.0,

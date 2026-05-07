@@ -5,7 +5,7 @@ This is intentionally bounded for CPU execution:
 1. Verify autograd with a tiny scalar backward.
 2. Supervised-pretrain APGPolicy against the promoted direct-CfC teacher.
 3. Fine-tune through the differentiable reduced twin with ``train_apg``.
-4. Evaluate APG against RH-LQR and the current direct-CfC checkpoint on M5.
+4. Evaluate APG against DLQR and the current direct-CfC checkpoint on M5.
 
 The output is a completed APG checkpoint, even if it does not win.
 """
@@ -29,7 +29,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 
 from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
 
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.policy.apg import APGPolicy  # noqa: E402
 from cptservo.policy.ml_research import CfCDirectController  # noqa: E402
@@ -303,15 +303,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     }
     if args.eval_duration_s > 0:
         metrics["eval_duration_s"] = args.eval_duration_s
-        metrics["rh_lqr"] = evaluate_controller(RHLQRController.from_recipe(), args.eval_duration_s)
+        metrics["dlqr"] = evaluate_controller(DLQRController.from_recipe(), args.eval_duration_s)
         metrics["teacher_cfc_direct"] = evaluate_controller(
             CfCDirectController.load(teacher_path),
             args.eval_duration_s,
         )
         metrics["apg"] = evaluate_controller(APGPolicy.load(str(ckpt_path)), args.eval_duration_s)
         metrics["apg_over_rhlqr_10s"] = (
-            metrics["apg"]["sigma_y_10s"] / metrics["rh_lqr"]["sigma_y_10s"]
-            if metrics["rh_lqr"]["sigma_y_10s"] > 0 else float("nan")
+            metrics["apg"]["sigma_y_10s"] / metrics["dlqr"]["sigma_y_10s"]
+            if metrics["dlqr"]["sigma_y_10s"] > 0 else float("nan")
         )
 
     (run_dir / "metrics.json").write_text(

@@ -26,7 +26,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 from apg_autograd_retry import _env_at, _run_teacher_errors, evaluate_controller  # noqa: E402
 from cfc_direct_train import initialize_structured_direct  # noqa: E402
 
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.policy.ml_research import (  # noqa: E402
     CfCDirectConfig,
     CfCDirectController,
@@ -194,7 +194,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     }
     if args.eval_duration_s > 0:
         metrics["eval_duration_s"] = args.eval_duration_s
-        metrics["rh_lqr"] = evaluate_controller(RHLQRController.from_recipe(), args.eval_duration_s)
+        metrics["dlqr"] = evaluate_controller(DLQRController.from_recipe(), args.eval_duration_s)
         metrics["teacher"] = evaluate_controller(
             CfCDirectController.load(teacher_path),
             args.eval_duration_s,
@@ -204,8 +204,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             args.eval_duration_s,
         )
         metrics["cfc_autograd_over_rhlqr_10s"] = (
-            metrics["cfc_autograd"]["sigma_y_10s"] / metrics["rh_lqr"]["sigma_y_10s"]
-            if metrics["rh_lqr"]["sigma_y_10s"] > 0 else float("nan")
+            metrics["cfc_autograd"]["sigma_y_10s"] / metrics["dlqr"]["sigma_y_10s"]
+            if metrics["dlqr"]["sigma_y_10s"] > 0 else float("nan")
         )
     (run_dir / "metrics.json").write_text(
         json.dumps(_json_safe(metrics), indent=2),

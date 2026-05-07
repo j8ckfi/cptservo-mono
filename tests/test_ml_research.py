@@ -159,7 +159,7 @@ def test_physics_residual_rejects_bad_sensor_values() -> None:
 
 
 def test_cfc_zeroed_residual_matches_rhlqr() -> None:
-    """A zeroed CfC with no base residual is exactly the RH-LQR inner loop."""
+    """A zeroed CfC with no base residual is exactly the DLQR inner loop."""
     cfg = CfCFeedforwardConfig(base_residual=PhysicsResidualConfig())
     cfc = CfCFeedforwardController(cfg)
     lqr = cfc._lqr.__class__.from_recipe()
@@ -272,7 +272,7 @@ def test_cfc_rejects_bad_sensors_and_clips_residual() -> None:
 
 
 def test_cfc_linear_regime_matches_rhlqr_runner() -> None:
-    """Zeroed CfC does not perturb RH-LQR in a clean linear-regime rollout."""
+    """Zeroed CfC does not perturb DLQR in a clean linear-regime rollout."""
     trace = Disturbance.from_recipe("clean").generate(
         duration_s=0.02,
         sample_rate_Hz=10_000.0,

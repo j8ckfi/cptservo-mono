@@ -1,6 +1,6 @@
 """Local non-autograd training for a standalone CfC direct-action controller.
 
-The direct controller does not call RH-LQR at runtime.  It is distilled from a
+The direct controller does not call DLQR at runtime.  It is distilled from a
 teacher trajectory into a tiny closed-form recurrent policy:
 
     u_rf = CfC(error, sensors, recurrent_state)
@@ -26,7 +26,7 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 
 from run_m3_m4_gates import make_calibrated_twin  # noqa: E402
 
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.policy.ml_research import (  # noqa: E402
     CfCDirectConfig,
@@ -82,7 +82,7 @@ def make_teacher(checkpoint: str) -> Any:
     """Build the teacher controller used only for distillation labels."""
     if checkpoint:
         return CfCFeedforwardController.load(checkpoint)
-    return RHLQRController.from_recipe()
+    return DLQRController.from_recipe()
 
 
 def evaluate(controller: Any, duration_s: float, seed: int = RNG_SEED) -> dict[str, float]:
@@ -197,7 +197,7 @@ def initialize_structured_direct(
     kd_error: float,
 ) -> dict[str, float]:
     """Initialize direct CfC readout as sensor feedforward plus feedback."""
-    lqr_gain = RHLQRController.from_recipe().K
+    lqr_gain = DLQRController.from_recipe().K
     kp_eff = float(kp) if kp is not None else float(lqr_gain[0, 0])
     ki_eff = float(ki) if ki is not None else float(lqr_gain[0, 1])
     for key in controller.weights:
@@ -306,14 +306,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         },
         "fit_metrics": fit_metrics,
         "training_note": (
-            "Standalone direct CfC checkpoint does not call RH-LQR at runtime. "
+            "Standalone direct CfC checkpoint does not call DLQR at runtime. "
             "It is either distilled from a teacher trajectory or initialized "
             "from closed-loop coefficient search."
         ),
     }
     if args.eval_duration_s > 0.0:
         metrics["eval_duration_s"] = args.eval_duration_s
-        metrics["rh_lqr"] = evaluate(RHLQRController.from_recipe(), args.eval_duration_s)
+        metrics["dlqr"] = evaluate(DLQRController.from_recipe(), args.eval_duration_s)
         if teacher_checkpoint:
             metrics["teacher"] = evaluate(
                 CfCFeedforwardController.load(teacher_checkpoint),

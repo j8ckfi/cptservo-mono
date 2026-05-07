@@ -31,7 +31,7 @@ from run_m11_gate import (  # noqa: E402
     make_perturbed_twin,
 )
 
-from cptservo.baselines.rh_lqr import RHLQRController  # noqa: E402
+from cptservo.baselines.dlqr import DLQRController  # noqa: E402
 from cptservo.evaluation.batched_runner import run_batched_loop  # noqa: E402
 from cptservo.twin.allan import overlapping_allan  # noqa: E402
 from cptservo.twin.disturbance import Disturbance, DisturbanceTrace  # noqa: E402
@@ -45,7 +45,7 @@ CURRENT_M11_RATIO = 0.9682237494386449
 
 @dataclass(frozen=True)
 class LiquidObserverSpec:
-    """Small non-CfC liquid observer wrapped around RH-LQR."""
+    """Small non-CfC liquid observer wrapped around DLQR."""
 
     name: str
     k_T_Hz_per_K: float = 0.5
@@ -60,7 +60,7 @@ class LiquidObserverSpec:
 
 @dataclass(frozen=True)
 class AlphaBetaSpec:
-    """Explicit alpha-beta thermal observer wrapped around RH-LQR."""
+    """Explicit alpha-beta thermal observer wrapped around DLQR."""
 
     name: str
     k_T_Hz_per_K: float = 0.5
@@ -73,11 +73,11 @@ class AlphaBetaSpec:
 
 
 class LiquidObserverResidualController:
-    """Non-CfC liquid neural observer that adds a bounded residual over RH-LQR."""
+    """Non-CfC liquid neural observer that adds a bounded residual over DLQR."""
 
     def __init__(self, spec: LiquidObserverSpec) -> None:
         self.spec = spec
-        self._lqr = RHLQRController.from_recipe()
+        self._lqr = DLQRController.from_recipe()
         self.reset()
 
     def reset(self) -> None:
@@ -87,7 +87,7 @@ class LiquidObserverResidualController:
         self._last_slow_T = 0.0
 
     def step(self, error: float, env: dict[str, float] | None = None) -> tuple[float, float]:
-        """Apply RH-LQR feedback plus bounded liquid-observer residual."""
+        """Apply DLQR feedback plus bounded liquid-observer residual."""
         env = env or {}
         dt = 1.0 / DECIMATION_RATE_HZ
         T_dev = float(env.get("T_K", 333.15)) - 333.15
@@ -136,11 +136,11 @@ class LiquidObserverResidualController:
 
 
 class AlphaBetaThermalObserverController:
-    """Alpha-beta thermal state estimator with bounded residual over RH-LQR."""
+    """Alpha-beta thermal state estimator with bounded residual over DLQR."""
 
     def __init__(self, spec: AlphaBetaSpec) -> None:
         self.spec = spec
-        self._lqr = RHLQRController.from_recipe()
+        self._lqr = DLQRController.from_recipe()
         self.reset()
 
     def reset(self) -> None:
@@ -150,7 +150,7 @@ class AlphaBetaThermalObserverController:
         self._dT_est = 0.0
 
     def step(self, error: float, env: dict[str, float] | None = None) -> tuple[float, float]:
-        """Apply RH-LQR feedback plus alpha-beta thermal feedforward."""
+        """Apply DLQR feedback plus alpha-beta thermal feedforward."""
         dt = 1.0 / DECIMATION_RATE_HZ
         T_meas = float((env or {}).get("T_K", 333.15))
         self._T_est = self._T_est + self._dT_est * dt
@@ -403,9 +403,9 @@ def evaluate_candidates(
     probe: dict[str, Any],
     duration_s: float,
 ) -> dict[str, Any]:
-    """Evaluate RH-LQR plus all candidates on one probe."""
-    controllers: list[Any] = [RHLQRController.from_recipe()]
-    labels = ["rh_lqr"]
+    """Evaluate DLQR plus all candidates on one probe."""
+    controllers: list[Any] = [DLQRController.from_recipe()]
+    labels = ["dlqr"]
     for kind, spec in specs:
         controllers.append(make_controller(kind, spec))
         labels.append(spec.name)
@@ -421,7 +421,7 @@ def evaluate_candidates(
         shared_noise_across_batch=True,
         autograd=False,
     )
-    rh = metrics_from_y_rf(res["y"][0], res["rf_cmd"][0], "rh_lqr")
+    rh = metrics_from_y_rf(res["y"][0], res["rf_cmd"][0], "dlqr")
     candidates: dict[str, Any] = {}
     for idx, label in enumerate(labels[1:], start=1):
         metrics = metrics_from_y_rf(res["y"][idx], res["rf_cmd"][idx], label)
@@ -436,7 +436,7 @@ def evaluate_candidates(
             "ties_or_wins_10s": bool(np.isfinite(ratio) and ratio <= 1.0 + TIE_TOLERANCE),
         }
     return {
-        "rh_lqr": rh,
+        "dlqr": rh,
         "candidates": candidates,
         "wall_s": float(res["wall_s"]),
     }
